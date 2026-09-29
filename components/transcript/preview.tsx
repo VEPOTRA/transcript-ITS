@@ -280,9 +280,9 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                       background: "#1762bd",
                       color: "white",
                       textAlign: "center",
-                      fontSize: "11px",
+                      fontSize: "10px",
                       fontWeight: 700,
-                      padding: "3px",
+                      padding: "1px",
                       margin: "4px 0 1px",
                     }}
                   >
