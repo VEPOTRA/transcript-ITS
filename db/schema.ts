@@ -22,6 +22,14 @@ export const studentStatusEnum = pgEnum("student_status", [
   "GRADUATED",
   "WITHDRAWN",
 ]);
+export const studentTypeEnum = pgEnum("student_type", [
+  "UNDERGRADUATE",
+  "POSTGRADUATE",
+]);
+export const programmeTypeEnum = pgEnum("programme_type", [
+  "DEGREE",
+  "DIPLOMA",
+]);
 export const gradeEnum = pgEnum("grade", [
   "A",
   "B+",
@@ -99,7 +107,7 @@ export const programmes = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     code: varchar("code", { length: 50 }).notNull(),
-    programmeType: varchar("programme_type", { length: 20 })
+    programmeType: programmeTypeEnum("programme_type")
       .notNull()
       .default("DEGREE"),
     programmeCampus: varchar("programme_campus", { length: 150 }),
@@ -120,7 +128,7 @@ export const students = pgTable(
     firstName: varchar("first_name", { length: 100 }).notNull(),
     middleName: varchar("middle_name", { length: 100 }),
     lastName: varchar("last_name", { length: 100 }).notNull(),
-    studentType: varchar("student_type", { length: 20 })
+    studentType: studentTypeEnum("student_type")
       .notNull()
       .default("UNDERGRADUATE"),
     dateOfBirth: date("date_of_birth"),

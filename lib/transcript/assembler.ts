@@ -59,7 +59,7 @@ import type {
   TranscriptSummary,
   TranscriptGenerationError,
 } from "./types";
-
+import { toGenderLabel } from "./gender";
 // ─── Result type ──────────────────────────────────────────────────────────────
 
 type AssembleResult =
@@ -315,18 +315,13 @@ export async function assembleTranscript(
     indexNumber: s.indexNumber,
     firstName: s.firstName,
     lastName: s.lastName,
-    fullName: [s.firstName, (s as any).middleName || null, s.lastName]
+    fullName: [s.firstName, s.middleName, s.lastName]
       .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
       .join(" "),
-    middleName:
-      typeof (s as any).middleName === "string" && (s as any).middleName.trim()
-        ? (s as any).middleName.trim()
-        : null,
-    studentType: ((s as any).studentType ?? "UNDERGRADUATE") as
-      | "UNDERGRADUATE"
-      | "POSTGRADUATE",
-    dateOfBirth: (s as any).dateOfBirth ?? null,
-    gender: (s as any).gender ?? null,
+    middleName: s.middleName?.trim() || null,
+    studentType: s.studentType ?? "UNDERGRADUATE",
+    dateOfBirth: s.dateOfBirth ?? null,
+    gender: toGenderLabel(s.gender), // ← M/F/O → Male/Female/Other
     level: s.level,
     entryYear: s.entryYear,
     graduationYear: s.graduationYear,
@@ -335,7 +330,7 @@ export async function assembleTranscript(
       id: s.programmeId,
       name: s.programmeName,
       code: s.programmeCode,
-      type: ((s as any).programmeType ?? "DEGREE") as "DEGREE" | "DIPLOMA",
+      type: s.programmeType ?? "DEGREE",
     },
   };
 

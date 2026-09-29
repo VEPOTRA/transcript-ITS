@@ -43,6 +43,13 @@
       "when": 1789323188132,
       "tag": "0005_faithful_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790620406538,
+      "tag": "0006_clammy_serpent_society",
+      "breakpoints": true
     }
   ]
 }

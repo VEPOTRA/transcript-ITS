@@ -36,7 +36,8 @@ export const PERMISSION_MAP: Record<Permission, string[]> = {
   bulk_upload: ["SUPER_ADMIN", "ADMIN"],
   generate_transcripts: ["SUPER_ADMIN", "ADMIN", "VIEWER"],
   view_transcripts: ["SUPER_ADMIN", "ADMIN", "VIEWER"],
-  view_grades: ["SUPER_ADMIN", "ADMIN", "VIEWER"],
+  // view_grades: ["SUPER_ADMIN", "ADMIN", "VIEWER"],
+  view_grades: ["SUPER_ADMIN", "ADMIN"],
   view_audit_logs: ["SUPER_ADMIN", "ADMIN"],
   search_students: ["SUPER_ADMIN", "ADMIN", "VIEWER"],
 };

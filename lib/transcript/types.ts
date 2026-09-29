@@ -29,6 +29,7 @@
  */
 
 import type { GradeClassification } from "@/lib/gpa/types";
+import { GenderLabel } from "./gender";
 
 // Re-export so callers only need one import path
 export type { GradeClassification };
@@ -116,9 +117,9 @@ export type TranscriptStudent = {
   middleName: string | null;
   /** firstName + middleName? + lastName */
   fullName: string;
-  studentType: "UNDERGRADUATE" | "POSTGRADUATE";
+  studentType: string; // "UNDERGRADUATE" | "POSTGRADUATE"
   dateOfBirth: string | null;
-  gender: string | null;
+  gender: GenderLabel | null;
   level: number;
   entryYear: string;
   graduationYear: string | null;
@@ -127,7 +128,7 @@ export type TranscriptStudent = {
     id: string;
     name: string;
     code: string;
-    type: "DEGREE" | "DIPLOMA";
+    type: string; // "DEGREE" | "DIPLOMA"
   };
 };
 
