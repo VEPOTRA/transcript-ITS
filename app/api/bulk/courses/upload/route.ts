@@ -133,7 +133,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 400 },
     );
 
-  const header = parseCSVLine(lines[0].toLowerCase()).map((h) => h.replace(/^"|"$/g, ""));
+  const header = parseCSVLine(lines[0].toLowerCase()).map((h) =>
+    h.replace(/^"|"$/g, ""),
+  );
   const codeIdx = header.indexOf("code");
   const titleIdx = header.indexOf("title");
   const creditIdx = header.findIndex((h) =>
@@ -162,6 +164,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const dataLines = lines.slice(1).slice(0, MAX_ROWS);
   type ValidRow = {
+    sourceCourseId?: number;
     code: string;
     title: string;
     creditHours: number;
@@ -256,6 +259,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       await db.insert(courses).values(
         batch.map((r) => ({
           code: r.code.toUpperCase(),
+          sourceCourseId: r.sourceCourseId ?? 0,
           title: r.title,
           category: r.category,
           creditHours: r.creditHours,
@@ -269,6 +273,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         try {
           await db.insert(courses).values({
             code: row.code.toUpperCase(),
+            sourceCourseId: row.sourceCourseId ?? 0,
             title: row.title,
             category: row.category,
             creditHours: row.creditHours,
