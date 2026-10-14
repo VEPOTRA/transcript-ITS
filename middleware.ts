@@ -94,7 +94,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         adminId: session.adminId,
         email: session.email,
         role: session.role,
-        campusId: session.campusId,
+        campusIds: session.campusIds,
       });
       response.cookies.set(COOKIE_NAME, freshToken, COOKIE_OPTIONS);
     } catch (err) {
