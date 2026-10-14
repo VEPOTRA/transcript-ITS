@@ -16,8 +16,8 @@ import type { AuthenticatedAdmin } from "@/types/auth";
 export function studentCampusFilter(
   session: AuthenticatedAdmin,
 ): SQL | undefined {
-  if (session.role === "SUPER_ADMIN" || !session.campusId) return undefined;
-  return eq(students.campusId, session.campusId);
+  if (session.role === "SUPER_ADMIN" || !session.campusIds) return undefined;
+  return eq(students.campusId, session.campusIds);
 }
 
 /**
@@ -28,8 +28,8 @@ export function canAccessStudent(
   studentCampusId: string | null,
 ): boolean {
   if (session.role === "SUPER_ADMIN") return true;
-  if (!session.campusId) return true; // shouldn't happen but fail open
-  return session.campusId === studentCampusId;
+  if (!session.campusIds) return true; // shouldn't happen but fail open
+  return session.campusIds === studentCampusId;
 }
 
 /**

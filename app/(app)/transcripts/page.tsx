@@ -42,8 +42,8 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
     );
 
     // SUPER_ADMIN searches all campuses; others only their campus
-    const campusCondition = session.role !== "SUPER_ADMIN" && session.campusId
-      ? eq(students.campusId, session.campusId)
+    const campusCondition = session.role !== "SUPER_ADMIN" && session.campusIds
+      ? eq(students.campusId, session.campusIds)
       : undefined;
 
     matched = await db
