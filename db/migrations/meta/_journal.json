@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1788524732095,
-      "tag": "0000_wise_captain_marvel",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1789254875499,
-      "tag": "0001_chief_thanos",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1789263768384,
-      "tag": "0002_tough_wraith",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1789264892329,
-      "tag": "0003_known_tarot",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1789267937261,
-      "tag": "0004_dizzy_smiling_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1789323188132,
-      "tag": "0005_faithful_silver_sable",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1790620406538,
-      "tag": "0006_clammy_serpent_society",
+      "when": 1791457689959,
+      "tag": "0000_sloppy_wind_dancer",
       "breakpoints": true
     }
   ]

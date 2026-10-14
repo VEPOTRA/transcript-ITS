@@ -1,30 +1,43 @@
 /**
- * /students — filtered by the logged-in admin's campus.
- * SUPER_ADMIN sees all students (campusId = null).
+ * app/(app)/students/page.tsx
+ *
+ * Search-on-demand: no DB query until the user submits a search.
+ * Accepts ?q= URL param — populated by the search form in StudentsClient.
  */
 import { requireAuth } from "@/lib/auth/rbac";
-import { getStudents } from "@/actions/crud/students";
+import { searchStudents } from "@/actions/crud/students";
 import { getProgrammes } from "@/actions/crud/programmes";
 import { getCampuses } from "@/actions/crud/campuses";
 import { StudentsClient } from "./_components/students-client";
 
-export default async function StudentsPage() {
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const session = await requireAuth();
+  const { q } = await searchParams;
+  const query = q?.trim() ?? "";
 
-  // Campus filter: SUPER_ADMIN sees all (null), others see their campus only
-  const campusFilter = session.role === "SUPER_ADMIN" ? null : session.campusId;
+  const campusIds = session.role === "SUPER_ADMIN"
+    ? null
+    : (session.campusIds ? [session.campusIds] : []);
 
+  // Only run the student query when there is an actual search term
   const [students, programmes, campuses] = await Promise.all([
-    getStudents(campusFilter),
+    query.length >= 2
+      ? searchStudents(query, campusIds)
+      : Promise.resolve([]),
     getProgrammes(),
     getCampuses(),
   ]);
 
   return (
     <StudentsClient
-      initial={students.map(s => ({ ...s, programmeName: s.programmeName ?? "" }))}
+      initial={students}
       programmes={programmes}
       campuses={campuses}
+      initialQuery={query}
     />
   );
 }

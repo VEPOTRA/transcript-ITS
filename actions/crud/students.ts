@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray, ilike, or, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { students, programmes, campuses } from "@/db/schema";
 import { assertPermission } from "@/lib/auth/rbac";
@@ -13,6 +13,8 @@ import type { ActionState } from "@/types/auth";
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const studentSchema = z.object({
+  oldStudId: z.string().nullable().optional(),
+  regno: z.string().nullable().optional(),
   indexNumber: z.string().min(1).max(100),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
@@ -25,18 +27,14 @@ const studentSchema = z.object({
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).nullable().optional(),
   programmeId: z.string().uuid(),
   level: z.coerce.number().int().min(100).max(900),
-  entryYear: z.string().max(15).min(4),
-  graduationYear: z
-    .string()
-    .max(15)
-    .min(4)
+  entryYear: z.coerce.string().min(4).max(15),
+  graduationYear: z.coerce
+    .number()
+    .int()
+    .min(1990)
+    .max(2099)
     .nullable()
-    .optional()
-    .transform((val) => {
-      if (val === null || val === undefined || val.trim() === "") {
-        return null;
-      }
-    }),
+    .optional(),
   email: z.string().email().nullable().optional(),
   phoneNumber: z.string().nullable().optional(),
 });
@@ -79,6 +77,8 @@ export async function createStudentAction(
     graduationYear: str(formData, "graduationYear"),
     email: str(formData, "email"),
     phoneNumber: str(formData, "phoneNumber"),
+    oldStudId: str(formData, "oldStudId"),
+    regno: str(formData, "regno"),
   });
 
   if (!parsed.success) {
@@ -91,6 +91,8 @@ export async function createStudentAction(
     const [created] = await db
       .insert(students)
       .values({
+        oldStudId: d.oldStudId ?? null,
+        regno: d.regno ?? null,
         indexNumber: d.indexNumber,
         firstName: d.firstName,
         middleName: d.middleName ?? null,
@@ -102,7 +104,7 @@ export async function createStudentAction(
         programmeId: d.programmeId,
         level: d.level,
         entryYear: d.entryYear,
-        graduationYear: d.graduationYear ?? null,
+        graduationYear: d.graduationYear?.toString() ?? null,
         email: d.email ?? null,
         phoneNumber: d.phoneNumber ?? null,
         status: "ACTIVE",
@@ -201,7 +203,7 @@ export async function updateStudentAction(
         ...(fields.campusId !== undefined && { campusId: fields.campusId }),
         dateOfBirth: fields.dateOfBirth ?? null,
         gender: fields.gender ?? null,
-        graduationYear: fields.graduationYear ?? null,
+        graduationYear: fields.graduationYear?.toString() ?? null,
         email: fields.email ?? null,
         phoneNumber: fields.phoneNumber ?? null,
       })
@@ -311,7 +313,7 @@ export async function updateStudentStatusAction(
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getStudents(campusId?: string | null) {
+export async function getStudents(campusIds?: string[] | null) {
   const base = db
     .select({
       id: students.id,
@@ -338,18 +340,71 @@ export async function getStudents(campusId?: string | null) {
     .leftJoin(programmes, eq(students.programmeId, programmes.id))
     .leftJoin(campuses, eq(students.campusId, campuses.id));
 
-  // Campus filter: SUPER_ADMIN passes null = no filter; others are restricted
-  if (campusId) {
+  // Campus filter: empty/null = SUPER_ADMIN (no restriction); array = campus-restricted
+  if (campusIds && campusIds.length > 0) {
     return base
-      .where(eq(students.campusId, campusId))
+      .where(inArray(students.campusId, campusIds))
       .orderBy(desc(students.createdAt));
   }
   return base.orderBy(desc(students.createdAt));
 }
 
+/**
+ * Search students by index number, name, or programme name.
+ * Called only when the user submits a search — never on page load.
+ */
+export async function searchStudents(
+  query: string,
+  campusIds: string[] | null,
+) {
+  const q = `%${query.trim().toLowerCase()}%`;
+
+  const base = db
+    .select({
+      id: students.id,
+      indexNumber: students.indexNumber,
+      firstName: students.firstName,
+      middleName: students.middleName,
+      lastName: students.lastName,
+      studentType: students.studentType,
+      campusId: students.campusId,
+      campusName: campuses.name,
+      dateOfBirth: students.dateOfBirth,
+      gender: students.gender,
+      programmeId: students.programmeId,
+      programmeName: programmes.name,
+      level: students.level,
+      entryYear: students.entryYear,
+      graduationYear: students.graduationYear,
+      status: students.status,
+      email: students.email,
+      phoneNumber: students.phoneNumber,
+      createdAt: students.createdAt,
+    })
+    .from(students)
+    .leftJoin(programmes, eq(students.programmeId, programmes.id))
+    .leftJoin(campuses, eq(students.campusId, campuses.id));
+
+  const searchCondition = or(
+    ilike(students.indexNumber, q),
+    ilike(students.firstName, q),
+    ilike(students.lastName, q),
+    ilike(sql`COALESCE(${students.middleName}, '')`, q),
+  );
+
+  if (campusIds && campusIds.length > 0) {
+    return base
+      .where(and(searchCondition, inArray(students.campusId, campusIds)))
+      .orderBy(students.indexNumber)
+      .limit(100);
+  }
+
+  return base.where(searchCondition).orderBy(students.indexNumber).limit(100);
+}
+
 export async function getStudentById(
   id: string,
-  campusId?: string | null, // pass session.campusId to enforce campus access
+  campusIds?: string[] | null, // pass session.campusId to enforce campus access
 ) {
   const [row] = await db
     .select({
@@ -380,8 +435,14 @@ export async function getStudentById(
 
   if (!row) return null;
 
-  // Campus enforcement: if a campusId is given, block cross-campus access
-  if (campusId && row.campusId !== campusId) return null;
+  // Campus enforcement: if campusIds provided, student must belong to one of them
+  if (
+    campusIds &&
+    campusIds.length > 0 &&
+    row.campusId &&
+    !campusIds.includes(row.campusId)
+  )
+    return null;
 
   return row;
 }

@@ -2,25 +2,18 @@
 
 /**
  * actions/crud/campuses.ts
- * Campus management — SUPER_ADMIN only.
+ * Campus CRUD + admin-campus assignment (many-to-many).
  */
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { campuses, admins, students } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { campuses, admins, adminCampuses } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { assertPermission } from "@/lib/auth/rbac";
 import type { ActionState } from "@/types/auth";
 
-export type Campus = {
-  id: string;
-  name: string;
-  code: string;
-  address: string | null;
-  isActive: boolean | null;
-  createdAt: Date;
-};
+export type Campus = typeof campuses.$inferSelect;
 
 const campusSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(255),
@@ -43,6 +36,26 @@ export async function getCampusById(id: string): Promise<Campus | null> {
   return row ?? null;
 }
 
+/** Returns all campus IDs assigned to a given admin (empty = SUPER_ADMIN) */
+export async function getAdminCampusIds(adminId: string): Promise<string[]> {
+  const rows = await db
+    .select({ campusId: adminCampuses.campusId })
+    .from(adminCampuses)
+    .where(eq(adminCampuses.adminId, adminId));
+  return rows.map((r) => r.campusId);
+}
+
+/** Returns campuses with their assigned admin count */
+export async function getCampusesWithStats() {
+  const all = await db.select().from(campuses).orderBy(campuses.name);
+  const assigns = await db.select().from(adminCampuses);
+  const countMap = new Map<string, number>();
+  for (const a of assigns) {
+    countMap.set(a.campusId, (countMap.get(a.campusId) ?? 0) + 1);
+  }
+  return all.map((c) => ({ ...c, adminCount: countMap.get(c.id) ?? 0 }));
+}
+
 // ─── Create ───────────────────────────────────────────────────────────────────
 
 export async function createCampusAction(
@@ -56,10 +69,8 @@ export async function createCampusAction(
     code: formData.get("code"),
     address: formData.get("address") || undefined,
   });
-
-  if (!parsed.success) {
+  if (!parsed.success)
     return { status: "error", error: parsed.error.issues[0].message };
-  }
 
   try {
     const [created] = await db
@@ -71,17 +82,15 @@ export async function createCampusAction(
         isActive: true,
       })
       .returning({ id: campuses.id });
-
     revalidatePath("/admin/campuses");
     return { status: "success", data: { id: created.id } };
   } catch (err) {
     const msg = err instanceof Error ? err.message.toLowerCase() : "";
-    if (msg.includes("unique") || msg.includes("duplicate")) {
+    if (msg.includes("unique") || msg.includes("duplicate"))
       return {
         status: "error",
         error: "A campus with that name or code already exists.",
       };
-    }
     return {
       status: "error",
       error: "Failed to create campus. Please try again.",
@@ -96,7 +105,6 @@ export async function updateCampusAction(
   formData: FormData,
 ): Promise<ActionState> {
   await assertPermission("manage_institution");
-
   const id = String(formData.get("id") ?? "");
   if (!id) return { status: "error", error: "Missing campus ID." };
 
@@ -105,10 +113,8 @@ export async function updateCampusAction(
     code: formData.get("code"),
     address: formData.get("address") || undefined,
   });
-
-  if (!parsed.success) {
+  if (!parsed.success)
     return { status: "error", error: parsed.error.issues[0].message };
-  }
 
   await db
     .update(campuses)
@@ -129,14 +135,12 @@ export async function toggleCampusActiveAction(
   id: string,
 ): Promise<ActionState> {
   await assertPermission("manage_institution");
-
   const [campus] = await db
     .select()
     .from(campuses)
     .where(eq(campuses.id, id))
     .limit(1);
   if (!campus) return { status: "error", error: "Campus not found." };
-
   await db
     .update(campuses)
     .set({ isActive: !campus.isActive })
@@ -145,16 +149,52 @@ export async function toggleCampusActiveAction(
   return { status: "success" };
 }
 
-// ─── Assign admin to campus ───────────────────────────────────────────────────
+// ─── Assign campuses to admin (replaces all existing assignments) ─────────────
 
-export async function assignAdminCampusAction(
+export async function setAdminCampusesAction(
   adminId: string,
-  campusId: string | null,
+  campusIds: string[],
 ): Promise<ActionState> {
   await assertPermission("manage_users");
 
-  await db.update(admins).set({ campusId }).where(eq(admins.id, adminId));
+  // Delete all existing assignments for this admin
+  await db.delete(adminCampuses).where(eq(adminCampuses.adminId, adminId));
 
+  // Insert new assignments (if any)
+  if (campusIds.length > 0) {
+    await db
+      .insert(adminCampuses)
+      .values(campusIds.map((campusId) => ({ adminId, campusId })));
+  }
+
+  revalidatePath("/admin/users");
+  return { status: "success" };
+}
+
+// ─── Add a single campus to an admin ─────────────────────────────────────────
+
+export async function addAdminCampusAction(
+  adminId: string,
+  campusId: string,
+): Promise<ActionState> {
+  await assertPermission("manage_users");
+  try {
+    await db.insert(adminCampuses).values({ adminId, campusId });
+    revalidatePath("/admin/users");
+    return { status: "success" };
+  } catch {
+    return { status: "error", error: "Campus already assigned to this admin." };
+  }
+}
+
+// ─── Remove a single campus from an admin ────────────────────────────────────
+
+export async function removeAdminCampusAction(
+  adminId: string,
+  campusId: string,
+): Promise<ActionState> {
+  await assertPermission("manage_users");
+  await db.delete(adminCampuses).where(eq(adminCampuses.adminId, adminId));
   revalidatePath("/admin/users");
   return { status: "success" };
 }
@@ -166,9 +206,8 @@ export async function assignStudentCampusAction(
   campusId: string,
 ): Promise<ActionState> {
   await assertPermission("manage_students");
-
+  const { students } = await import("@/db/schema");
   await db.update(students).set({ campusId }).where(eq(students.id, studentId));
-
   revalidatePath("/students");
   return { status: "success" };
 }

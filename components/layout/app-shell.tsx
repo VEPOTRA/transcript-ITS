@@ -219,7 +219,7 @@ export function AppShell({ session, children, pathname }: Props) {
               <div className="flex items-center gap-1 flex-wrap">
                 <span className={[
                   "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  ROLE_STYLES[session.role] ?? ROLE_STYLES.VIEWER,
+                  // ROLE_STYLES[session.role] ?? ROLE_STYLES.VIEWER,
                 ].join(" ")}>
                   {session.role.replace("_", " ")}
                 </span>
