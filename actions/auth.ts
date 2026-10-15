@@ -104,18 +104,29 @@ export async function loginAction(
   // ── Success — clear rate limit and create session ─────────────────────────
   await clearRateLimit(loginRateLimitKey(ip));
 
-  // Load all campus IDs for this admin from the junction table
-  const campusRows = await db
-    .select({ campusId: adminCampuses.campusId })
-    .from(adminCampuses)
-    .where(eq(adminCampuses.adminId, admin.id));
-  const campusIds = campusRows.map((r) => r.campusId);
+  // Load all campus IDs for this admin from the junction table.
+  // Wrapped in try/catch so login still works if the migration hasn't run yet.
+  let campusIds: string[] = [];
+  try {
+    const campusRows = await db
+      .select({ campusId: adminCampuses.campusId })
+      .from(adminCampuses)
+      .where(eq(adminCampuses.adminId, admin.id));
+    campusIds = campusRows.map((r) => r.campusId);
+  } catch (err) {
+    // admin_campuses table doesn't exist yet — run the migration in Neon SQL Editor.
+    // Fallback: SUPER_ADMIN gets full access, others get empty (full) access temporarily.
+    console.warn(
+      "[login] admin_campuses table missing — run migration. Defaulting to full access.",
+    );
+    campusIds = [];
+  }
 
   await createSession({
     adminId: admin.id,
     email: admin.email,
     role: admin.role,
-    campusIds: campusIds.join(","), // empty string = SUPER_ADMIN (sees everything)
+    campusIds, // empty = SUPER_ADMIN / full access
   });
 
   await logAuditEvent({

@@ -21,7 +21,7 @@ export default async function StudentsPage({
 
   const campusIds = session.role === "SUPER_ADMIN"
     ? null
-    : (session.campusIds ? [session.campusIds] : []);
+    : (session.campusIds ?? []);
 
   // Only run the student query when there is an actual search term
   const [students, programmes, campuses] = await Promise.all([

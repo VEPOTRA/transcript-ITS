@@ -1,26 +1,11 @@
 /**
- * POST /api/bulk/grades/upload
+ * POST /api/bulk/upload — Student bulk upload with smart campus handling.
  *
- * Accepts a multipart CSV upload, runs the full grade import pipeline,
- * and returns a GradeBulkResult JSON object.
- *
- * ─── Why an API route, not a server action?
- *
- * Multipart file uploads exceed what server actions handle cleanly.
- * The response is structured JSON that the client uses to render
- * the result UI — not a revalidation trigger.
- *
- * ─── Security
- *
- * gradePoint, creditHours, and computedQualityPoints are computed
- * entirely server-side in the validator. The CSV never contains them.
- * Any client attempting to inject these values will find they are
- * ignored — the pipeline reads only indexNumber, courseCode, semester,
- * year, and grade from the file.
- *
- * ─── Limits
- *   Max file size: 5 MB
- *   Max rows:      5,000
+ * Campus logic:
+ *   - Campus ADMIN / VIEWER: campus assigned automatically from session.
+ *     No campus_code column needed in CSV.
+ *   - SUPER_ADMIN: campus_code column required in CSV.
+ *     Accepts campus code (WIN) or full campus name (case-insensitive).
  */
 
 import { type NextRequest, NextResponse } from "next/server";
@@ -28,17 +13,18 @@ import { verifyToken } from "@/lib/auth/jwt";
 import { COOKIE_NAME } from "@/lib/auth/config";
 import { can } from "@/lib/auth/rbac";
 import { logAuditEvent, extractRequestMeta } from "@/lib/audit";
-import { parseGradeCSV } from "@/lib/bulk/grades/parser";
-import { validateGradeBatch } from "@/lib/bulk/grades/validator";
-import { runGradeBulkInsertPipeline } from "@/lib/bulk/grades/pipeline";
-import type { GradeBulkResult } from "@/lib/bulk/grades/types";
+import { parseStudentCSV } from "@/lib/bulk/parser";
+import { validateBatch } from "@/lib/bulk/validator";
+import { runStudentBulkInsertPipeline } from "@/lib/bulk/pipeline";
+import type { BulkUploadResult } from "@/lib/bulk/types";
+import { db } from "@/db";
+import { campuses } from "@/db/schema";
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_ROW_COUNT = 5_000;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // ── 1. Auth ────────────────────────────────────────────────────────────────
-
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const session = token ? await verifyToken(token) : null;
 
@@ -48,7 +34,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // ── 2. Parse multipart body ────────────────────────────────────────────────
-
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -67,24 +52,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // ── 3. Guards ──────────────────────────────────────────────────────────────
-
-  const isCSV =
-    file.type === "text/csv" ||
-    file.type === "application/vnd.ms-excel" ||
-    file.type === "text/plain" ||
-    file.name.toLowerCase().endsWith(".csv");
-
-  if (!isCSV) {
+  const mimeOk =
+    ["text/csv", "application/vnd.ms-excel", "text/plain"].includes(
+      file.type,
+    ) || file.name.toLowerCase().endsWith(".csv");
+  if (!mimeOk)
     return NextResponse.json(
-      {
-        error: `Invalid file type "${file.type}". Only CSV files are accepted.`,
-      },
+      { error: `Only CSV files are accepted.` },
       { status: 400 },
     );
-  }
-
-  if (file.size > MAX_FILE_BYTES) {
+  if (file.size > MAX_FILE_SIZE_BYTES) {
     return NextResponse.json(
       {
         error: `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 5 MB.`,
@@ -93,101 +70,171 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // ── 4. Read file content ───────────────────────────────────────────────────
-
   let text: string;
   try {
     text = await file.text();
   } catch {
     return NextResponse.json(
-      { error: "Failed to read the file. Ensure it is a valid UTF-8 CSV." },
+      { error: "Failed to read the file. Make sure it is a valid UTF-8 CSV." },
       { status: 400 },
     );
   }
 
-  if (text.trim().length === 0) {
+  if (!text.trim())
     return NextResponse.json(
       { error: "The uploaded file is empty." },
       { status: 400 },
     );
+
+  // ── 3. Strip comment rows ──────────────────────────────────────────────────
+  const stripped = text
+    .split("\n")
+    .filter((l) => !l.trimStart().startsWith("#"))
+    .join("\n");
+
+  // ── 4. Resolve campus ──────────────────────────────────────────────────────
+  // Load all campuses once for lookup
+  const allCampuses = await db
+    .select({ id: campuses.id, code: campuses.code, name: campuses.name })
+    .from(campuses);
+
+  const byCode = new Map(allCampuses.map((c) => [c.code.toLowerCase(), c]));
+  const byName = new Map(allCampuses.map((c) => [c.name.toLowerCase(), c]));
+
+  let sessionCampusId: string | null = null;
+  let isSuperAdmin = session.role === "SUPER_ADMIN";
+
+  if (!isSuperAdmin) {
+    // Campus ADMIN / VIEWER — use their campus from session
+    sessionCampusId = session.campusIds?.[0] ?? null;
+    if (!sessionCampusId) {
+      return NextResponse.json(
+        {
+          error:
+            "Your account is not assigned to a campus. Contact the Super Admin to assign you to a campus before uploading students.",
+        },
+        { status: 403 },
+      );
+    }
   }
 
   // ── 5. Parse CSV ───────────────────────────────────────────────────────────
-
   const {
     rows: rawRows,
-    missingHeaders,
+    missingHeaders: parsedMissingHeaders,
     totalDataRows,
-  } = parseGradeCSV(text);
+  } = parseStudentCSV(stripped);
+  const missingHeaders: string[] = parsedMissingHeaders;
 
-  if (missingHeaders.length > 0) {
+  // For SUPER_ADMIN, campus_code column must be present
+  if (isSuperAdmin && missingHeaders.includes("campus_code")) {
     return NextResponse.json(
       {
         error:
-          `Missing required columns: ${missingHeaders.join(", ")}. ` +
+          "Missing required column: campus_code. " +
+          "As SUPER_ADMIN you must include a campus_code column so each student is assigned to the correct campus. " +
+          "Use campus codes like WIN, KSI, MMP, or AMC.",
+      },
+      { status: 400 },
+    );
+  }
+
+  // Remove campus_code from missingHeaders for non-SUPER_ADMIN
+  const filteredMissingHeaders = isSuperAdmin
+    ? missingHeaders
+    : missingHeaders.filter((h) => h !== "campus_code");
+
+  if (filteredMissingHeaders.length > 0) {
+    return NextResponse.json(
+      {
+        error:
+          `Missing required columns: ${filteredMissingHeaders.join(", ")}. ` +
           `Download the template to see the expected format.`,
       },
       { status: 400 },
     );
   }
 
-  if (totalDataRows === 0) {
-    return NextResponse.json(
-      { error: "No data rows found in the file." },
-      { status: 400 },
-    );
-  }
-
+  if (totalDataRows === 0)
+    return NextResponse.json({ error: "No data rows found." }, { status: 400 });
   if (totalDataRows > MAX_ROW_COUNT) {
     return NextResponse.json(
       {
-        error:
-          `File contains ${totalDataRows.toLocaleString()} rows. ` +
-          `Maximum per upload is ${MAX_ROW_COUNT.toLocaleString()}. Split the file.`,
+        error: `File has ${totalDataRows.toLocaleString()} rows. Maximum is ${MAX_ROW_COUNT.toLocaleString()}. Split into smaller batches.`,
       },
       { status: 400 },
     );
   }
 
-  // ── 6. Audit: upload started ───────────────────────────────────────────────
+  // ── 6. Inject/resolve campusId into every raw row ─────────────────────────
+  //
+  // For campus ADMIN: set campusId from session on every row (ignore CSV campus_code).
+  // For SUPER_ADMIN:  look up campus_code from each row and attach campusId.
+  //
+  // This way validateBatch and runBulkInsertPipeline don't need to know about
+  // campus lookup — the campusId is already resolved on each row.
 
+  const rowsWithCampus = rawRows.map((row, i) => {
+    if (!isSuperAdmin) {
+      // Campus admin — auto-assign their campus
+      // For campus admin with multiple campuses, use first campus as default
+      return { ...row, resolvedCampusId: sessionCampusId };
+    }
+
+    // SUPER_ADMIN — look up from campus_code column
+    const raw = (row as any).campus_code?.trim() ?? "";
+    const campus =
+      byCode.get(raw.toLowerCase()) ?? byName.get(raw.toLowerCase());
+
+    if (!campus) {
+      // Attach error marker so validateBatch can report it
+      return {
+        ...row,
+        resolvedCampusId: null,
+        campusLookupError: raw
+          ? `Campus "${raw}" not found. Use a campus code (e.g. WIN, KSI, MMP, AMC) or the exact campus name.`
+          : `campus_code is empty on row ${i + 2}. Every row must have a campus code when uploading as SUPER_ADMIN.`,
+      };
+    }
+
+    return { ...row, resolvedCampusId: campus.id };
+  });
+
+  // ── 7. Audit: upload started ───────────────────────────────────────────────
   const meta = extractRequestMeta(request.headers);
   await logAuditEvent({
     adminId: session.adminId,
     action: "BULK_UPLOAD_STARTED",
-    entity: "grades",
+    entity: "students",
     after: {
       fileName: file.name,
       fileSize: file.size,
       rowCount: totalDataRows,
+      campusId: sessionCampusId,
     },
     ...meta,
   });
 
-  // ── 7. Validate (pre-fetches all lookup maps in 4 queries) ─────────────────
+  // ── 8. Validate all rows ───────────────────────────────────────────────────
+  const { validRows, failedRows } = await validateBatch(rowsWithCampus as any);
 
-  const { validRows, failedRows } = await validateGradeBatch(rawRows);
-
-  // ── 8. Insert valid rows ───────────────────────────────────────────────────
-
-  const result: GradeBulkResult = await runGradeBulkInsertPipeline(
+  // ── 9. Insert valid rows ───────────────────────────────────────────────────
+  const result: BulkUploadResult = await runStudentBulkInsertPipeline(
     validRows,
     failedRows,
     totalDataRows,
   );
 
-  // ── 9. Audit: upload completed ─────────────────────────────────────────────
-
+  // ── 10. Audit: completed ───────────────────────────────────────────────────
   await logAuditEvent({
     adminId: session.adminId,
     action: "BULK_UPLOAD_COMPLETED",
-    entity: "grades",
+    entity: "students",
     after: {
       fileName: file.name,
       totalRows: result.totalRows,
       successCount: result.successCount,
       failureCount: result.failureCount,
-      durationMs: result.durationMs,
     },
     ...meta,
   });

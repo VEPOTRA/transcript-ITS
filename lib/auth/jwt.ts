@@ -70,17 +70,15 @@ export async function verifyToken(
       email: payload.email,
       role: payload.role as AuthenticatedAdmin["role"],
       campusIds: (() => {
-        if (typeof payload.campusIds !== "string") return "[]";
+        if (typeof payload.campusIds !== "string") return [];
         try {
           const campusIds: unknown = JSON.parse(payload.campusIds);
-          return JSON.stringify(
-            Array.isArray(campusIds) &&
-              campusIds.every((id): id is string => typeof id === "string")
-              ? campusIds
-              : [],
-          );
+          return Array.isArray(campusIds) &&
+            campusIds.every((id): id is string => typeof id === "string")
+            ? campusIds
+            : [];
         } catch {
-          return "[]";
+          return [];
         }
       })(),
       iat: payload.iat!,

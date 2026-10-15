@@ -13,11 +13,11 @@ type Role = (typeof ROLES)[number];
 
 export default function NewAdminPage() {
   const router = useRouter();
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole]         = useState<Role>("ADMIN");
-  const [error, setError]       = useState<string | null>(null);
-  const [loading, setLoading]   = useState(false);
+  const [role, setRole] = useState<Role>("ADMIN");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,9 +31,9 @@ export default function NewAdminPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/users", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password, role }),
       });
 
       const data = await res.json();
@@ -102,8 +102,8 @@ export default function NewAdminPage() {
           </select>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {role === "SUPER_ADMIN" && "Full access including user management and institution settings."}
-            {role === "ADMIN"       && "Manage students, grades, bulk uploads, and transcripts."}
-            {role === "VIEWER"      && "Read-only access to students, grades, and transcripts."}
+            {role === "ADMIN" && "Manage students, grades, bulk uploads, and transcripts."}
+            {role === "VIEWER" && "Read-only access to students, grades, and transcripts."}
           </p>
         </div>
 

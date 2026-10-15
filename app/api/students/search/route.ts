@@ -35,7 +35,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     session.role === "SUPER_ADMIN"
       ? null
       : session.campusIds
-        ? [session.campusIds]
+        ? session.campusIds
         : [];
 
   // ── Search ───────────────────────────────────────────────────────────────────

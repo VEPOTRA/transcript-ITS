@@ -110,12 +110,6 @@ export default async function LoginPage({ searchParams }: Props) {
                   Forgot your password?
                 </a>
               </div>
-              <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-600">
-                First time?{" "}
-                <a href="/setup" className="text-indigo-600 hover:underline dark:text-indigo-400">
-                  Set up your admin account →
-                </a>
-              </p>
             </>
           )}
         </div>

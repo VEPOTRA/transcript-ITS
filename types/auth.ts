@@ -1,7 +1,7 @@
 /**
- * Shared auth types.
- * Derived from the roleEnum in the Drizzle schema — kept in sync manually.
- * Do not widen or redefine this type elsewhere in the codebase.
+ * types/auth.ts — Shared auth types.
+ *
+ * Do not widen or redefine these elsewhere in the codebase.
  */
 
 export type Role = "SUPER_ADMIN" | "ADMIN" | "VIEWER";
@@ -14,7 +14,7 @@ export type SessionPayload = {
   adminId: string;
   email: string;
   role: Role;
-  campusIds: string | null;
+  campusIds: string[]; // empty array = SUPER_ADMIN (unrestricted); 1+ = campus-restricted
 };
 
 /**
@@ -24,11 +24,10 @@ export type SessionPayload = {
 export type AuthenticatedAdmin = SessionPayload & {
   iat: number;
   exp: number;
-  campusIds: string | null;
 };
 
 /**
- * Shape returned by server actions that can fail with validation errors.
+ * Shape returned by server actions.
  * Compatible with React 19 useActionState.
  */
 export type ActionState<T = unknown> =

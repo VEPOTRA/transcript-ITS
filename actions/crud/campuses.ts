@@ -38,11 +38,16 @@ export async function getCampusById(id: string): Promise<Campus | null> {
 
 /** Returns all campus IDs assigned to a given admin (empty = SUPER_ADMIN) */
 export async function getAdminCampusIds(adminId: string): Promise<string[]> {
-  const rows = await db
-    .select({ campusId: adminCampuses.campusId })
-    .from(adminCampuses)
-    .where(eq(adminCampuses.adminId, adminId));
-  return rows.map((r) => r.campusId);
+  try {
+    const rows = await db
+      .select({ campusId: adminCampuses.campusId })
+      .from(adminCampuses)
+      .where(eq(adminCampuses.adminId, adminId));
+    return rows.map((r) => r.campusId);
+  } catch {
+    // Table doesn't exist yet — run migration-admin-campuses.sql in Neon SQL Editor
+    return [];
+  }
 }
 
 /** Returns campuses with their assigned admin count */
