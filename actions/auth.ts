@@ -36,14 +36,7 @@ export async function loginAction(
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
-    return {
-      status: "error",
-      error: "Email and password are required.",
-      fieldErrors: {
-        email: ["Email is required"],
-        password: ["Password is required"],
-      },
-    };
+    return { status: "error", error: "Email and password are required." };
   }
 
   const headerStore = await headers();
@@ -55,8 +48,9 @@ export async function loginAction(
   // ── Rate limit: 5 attempts per 15 minutes per IP ──────────────────────────
   const limit = await rateLimit(loginRateLimitKey(ip), {
     max: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
   });
+
   if (!limit.allowed) {
     return {
       status: "error",
@@ -97,10 +91,7 @@ export async function loginAction(
   const passwordMatch = await comparePassword(password, hashToCompare);
 
   if (!admin || !passwordMatch) {
-    return {
-      status: "error",
-      error: "Invalid email or password.",
-    };
+    return { status: "error", error: "Invalid email or password." };
   }
 
   if (!admin.isActive) {
@@ -113,11 +104,32 @@ export async function loginAction(
   // ── Success — clear rate limit and create session ─────────────────────────
   await clearRateLimit(loginRateLimitKey(ip));
 
+  // Load campus IDs from the junction table — dynamic import so a missing
+  // table or un-updated schema.ts never prevents login.
+  let campusIds: string[] = [];
+  try {
+    const { adminCampuses } = await import("@/db/schema");
+    if (adminCampuses) {
+      const campusRows = await db
+        .select({ campusId: adminCampuses.campusId })
+        .from(adminCampuses)
+        .where(eq(adminCampuses.adminId, admin.id));
+      campusIds = campusRows.map((r) => r.campusId);
+    }
+  } catch {
+    // admin_campuses table doesn't exist yet — run migration-admin-campuses.sql
+    // Login still succeeds; campus filtering won't be enforced until migration runs.
+    console.warn(
+      "[login] admin_campuses not ready — run migration. Defaulting to full access.",
+    );
+    campusIds = [];
+  }
+
   await createSession({
     adminId: admin.id,
     email: admin.email,
     role: admin.role,
-    campusId: admin.campusId,
+    campusIds, // empty = SUPER_ADMIN / full access
   });
 
   await logAuditEvent({
@@ -174,11 +186,7 @@ export async function changePasswordAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await getSession();
-  if (!session)
-    return {
-      status: "error",
-      error: "Not authenticated.",
-    };
+  if (!session) return { status: "error", error: "Not authenticated." };
 
   const parsed = changePasswordSchema.safeParse({
     currentPassword: formData.get("currentPassword"),
@@ -203,18 +211,11 @@ export async function changePasswordAction(
     .where(eq(admins.id, session.adminId))
     .limit(1);
 
-  if (!admin)
-    return {
-      status: "error",
-      error: "Account not found.",
-    };
+  if (!admin) return { status: "error", error: "Account not found." };
 
   const valid = await comparePassword(currentPassword, admin.password);
   if (!valid)
-    return {
-      status: "error",
-      error: "Current password is incorrect.",
-    };
+    return { status: "error", error: "Current password is incorrect." };
 
   const hashed = await hashPassword(newPassword);
   await db
@@ -232,5 +233,5 @@ export async function changePasswordAction(
     ...extractRequestMeta(headerStore),
   });
 
-  return { status: "success", data: { passwordChanged: true } };
+  return { status: "success" };
 }

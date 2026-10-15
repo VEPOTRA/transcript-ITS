@@ -63,13 +63,11 @@ export async function POST(req: NextRequest) {
       email,
       password: await hashPassword(body.password),
       role: body.role,
-      campusId: body.campusId ?? null,
     })
     .returning({
       id: admins.id,
       email: admins.email,
       role: admins.role,
-      campusId: admins.campusId,
       isActive: admins.isActive,
       createdAt: admins.createdAt,
     });
@@ -82,7 +80,6 @@ export async function POST(req: NextRequest) {
     after: {
       email: created.email,
       role: created.role,
-      campusId: created.campusId,
       isActive: created.isActive,
     },
     ...extractRequestMeta(req.headers),

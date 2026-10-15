@@ -19,9 +19,16 @@ import type { ActionState } from "@/types/auth";
 import type { Semester } from "@/actions/crud/semesters";
 
 const GRADE_LABELS: Record<string, string> = {
-  "A": "A  — 4.00", "B+": "B+ — 3.50", "B": "B  — 3.00",
-  "C+": "C+ — 2.50", "C": "C  — 2.00", "D+": "D+ — 1.50",
-  "D": "D  — 1.00", "F": "F  — 0.00 (Fail)",
+  "A": "A  — 4.00  (Excellent)",
+  "B+": "B+ — 3.50  (Very Good)",
+  "B": "B  — 3.00  (Good)",
+  "C+": "C+ — 2.50  (Above Average)",
+  "C": "C  — 2.00  (Average)",
+  "D+": "D+ — 1.50  (Below Average)",
+  "D": "D  — 1.00  (Marginal Pass)",
+  "E": "E  — 0.50  (Borderline Fail)",
+  "F": "F  — 0.00  (Fail)",
+  "IC": "IC — 0.00  (Incomplete)",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -44,12 +51,12 @@ type Student = {
 type Props = {
   semesters: Semester[];
   courses: Course[];
-  students: Student[];
+  // students loaded on-demand via search — not passed as props
 };
 
 const init: ActionState<{ id: string }> = { status: "idle" };
 
-export function GradeEntryForm({ semesters, courses, students }: Props) {
+export function GradeEntryForm({ semesters, courses }: Props) {
   const toast = useToast();
   const [state, formAction, isPending] = useActionState(createGradeAction, init);
   const [studentSearch, setStudentSearch] = useState("");
@@ -80,16 +87,24 @@ export function GradeEntryForm({ semesters, courses, students }: Props) {
     ? Object.entries(GRADE_LABELS)
     : [["P", "P — Pass (non-scoring)"], ["F", "F — Fail (non-scoring)"]];
 
-  // Filter students by search
-  const filteredStudents = useMemo(() => {
-    if (!studentSearch.trim()) return [];
-    const q = studentSearch.toLowerCase();
-    return students.filter(s =>
-      s.indexNumber.toLowerCase().includes(q) ||
-      s.firstName.toLowerCase().includes(q) ||
-      s.lastName.toLowerCase().includes(q)
-    ).slice(0, 8);
-  }, [students, studentSearch]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Search students via API on-demand
+  useEffect(() => {
+    const q = studentSearch.trim();
+    if (q.length < 2) { setFilteredStudents([]); return; }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/students/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setFilteredStudents(Array.isArray(data) ? data.slice(0, 8) : []);
+      } catch { setFilteredStudents([]); }
+      finally { setSearching(false); }
+    }, 300); // debounce 300ms
+    return () => clearTimeout(timer);
+  }, [studentSearch]);
 
   // Reset course when category changes
   useEffect(() => { setSelectedCourseId(""); }, [selectedCategory]);
@@ -143,7 +158,12 @@ export function GradeEntryForm({ semesters, courses, students }: Props) {
               placeholder="Search by index number or name…"
               className="block w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             />
-            {filteredStudents.length > 0 && (
+            {searching && (
+              <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                Searching…
+              </div>
+            )}
+            {!searching && filteredStudents.length > 0 && (
               <ul className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
                 {filteredStudents.map(s => (
                   <li key={s.id}>

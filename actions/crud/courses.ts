@@ -80,7 +80,10 @@ export async function createCourseAction(
 
     let record: Course;
     try {
-      [record] = await db.insert(courses).values(parsed.data).returning();
+      [record] = await db
+        .insert(courses)
+        .values({ ...parsed.data, sourceCourseId: 0 })
+        .returning();
     } catch (err) {
       const e = parseDbError(err);
       if (e.type === "unique") {

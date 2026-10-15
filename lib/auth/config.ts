@@ -38,7 +38,11 @@ export const BCRYPT_ROUNDS = 12;
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-export const AUTH_ROUTES = ["/login"] as const;
+export const AUTH_ROUTES = [
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+] as const;
 
 export const PROTECTED_PREFIXES = [
   "/dashboard",

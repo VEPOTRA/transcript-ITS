@@ -1,25 +1,27 @@
 /**
- * /grades — filtered by campus.
+ * app/(app)/grades/page.tsx
+ *
+ * Fixed: no longer pre-loads all students (was causing blank page).
+ * Students are searched on-demand inside the grade entry form.
+ * This page only loads semesters and courses — both are small sets.
  */
 import { requireAuth } from "@/lib/auth/rbac";
-import { getStudents } from "@/actions/crud/students";
 import { getSemesters } from "@/actions/crud/semesters";
 import { getActiveCourses } from "@/actions/crud/courses";
 import { GradesClient } from "./_components/grades-client";
 
 export default async function GradesPage() {
-  const session = await requireAuth();
-  const campusFilter = session.role === "SUPER_ADMIN" ? null : session.campusId;
+  await requireAuth();
 
-  const [students, semesters, courses] = await Promise.all([
-    getStudents(campusFilter),
+  // Only load the small reference tables — NOT all students
+  const [semesters, courses] = await Promise.all([
     getSemesters(),
     getActiveCourses(),
   ]);
 
   return (
     <GradesClient
-      students={students.map(s => ({ ...s, programmeName: s.programmeName ?? "" }))}
+      students={[]}
       semesters={semesters}
       courses={courses}
     />

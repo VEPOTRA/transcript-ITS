@@ -4,10 +4,10 @@
  */
 
 import { requirePermission } from "@/lib/auth/rbac";
-import { db }                from "@/db";
-import { admins }            from "@/db/schema";
-import { desc }              from "drizzle-orm";
-import type { Metadata }     from "next";
+import { db } from "@/db";
+import { admins } from "@/db/schema";
+import { desc } from "drizzle-orm";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Users — TMS Admin" };
 
@@ -16,9 +16,9 @@ export default async function AdminUsersPage() {
 
   const allAdmins = await db
     .select({
-      id:        admins.id,
-      email:     admins.email,
-      role:      admins.role,
+      id: admins.id,
+      email: admins.email,
+      role: admins.role,
       createdAt: admins.createdAt,
     })
     .from(admins)
@@ -90,8 +90,8 @@ export default async function AdminUsersPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { role: "SUPER_ADMIN", color: "purple", perms: "Full access including user management, institution settings, and grading scale." },
-            { role: "ADMIN",       color: "blue",   perms: "Manage students, courses, grades, bulk uploads, and transcripts." },
-            { role: "VIEWER",      color: "gray",   perms: "Read-only access to students, grades, and transcripts." },
+            { role: "ADMIN", color: "blue", perms: "Manage students, courses, grades, bulk uploads, and transcripts." },
+            { role: "VIEWER", color: "gray", perms: "Read-only access to students, grades, and transcripts." },
           ].map(({ role, color, perms }) => (
             <div key={role} className="rounded-lg border border-gray-200 bg-white p-3">
               <RoleBadge role={role as "SUPER_ADMIN" | "ADMIN" | "VIEWER"} />
@@ -107,8 +107,8 @@ export default async function AdminUsersPage() {
 function RoleBadge({ role }: { role: "SUPER_ADMIN" | "ADMIN" | "VIEWER" }) {
   const styles: Record<string, string> = {
     SUPER_ADMIN: "bg-purple-100 text-purple-800",
-    ADMIN:       "bg-blue-100   text-blue-800",
-    VIEWER:      "bg-gray-100   text-gray-600",
+    ADMIN: "bg-blue-100   text-blue-800",
+    VIEWER: "bg-gray-100   text-gray-600",
   };
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[role]}`}>

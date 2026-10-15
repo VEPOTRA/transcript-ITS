@@ -7,15 +7,15 @@
 
 import { requirePermission } from "@/lib/auth/rbac";
 import { db } from "@/db";
-import { students, courses, semesters, programmes } from "@/db/schema";
+import { courses, semesters } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { GradeEntryForm } from "./_components/grade-entry-form";
 
 export default async function GradeEntryPage() {
   await requirePermission("enter_grades");
 
-  // Load all active semesters, courses, and students for the form selects
-  const [allSemesters, allCourses, allStudents] = await Promise.all([
+  // Load all active semesters and courses for the form selects
+  const [allSemesters, allCourses] = await Promise.all([
     db
       .select()
       .from(semesters)
@@ -34,18 +34,6 @@ export default async function GradeEntryPage() {
       .where(eq(courses.isActive, true))
       .orderBy(courses.code),
 
-    db
-      .select({
-        id: students.id,
-        indexNumber: students.indexNumber,
-        firstName: students.firstName,
-        lastName: students.lastName,
-        programmeName: programmes.name,
-      })
-      .from(students)
-      .innerJoin(programmes, eq(students.programmeId, programmes.id))
-      .where(eq(students.status, "ACTIVE"))
-      .orderBy(students.indexNumber),
   ]);
 
   return (
@@ -61,7 +49,6 @@ export default async function GradeEntryPage() {
       <GradeEntryForm
         semesters={allSemesters}
         courses={allCourses}
-        students={allStudents}
       />
     </div>
   );

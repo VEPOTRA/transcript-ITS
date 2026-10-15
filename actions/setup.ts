@@ -81,7 +81,6 @@ export async function setupAdminAction(
       email: email.toLowerCase().trim(),
       password: hashed,
       role: "SUPER_ADMIN",
-      campusId: null,
       isActive: true,
     });
   } catch (err: unknown) {

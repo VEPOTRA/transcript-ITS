@@ -30,7 +30,9 @@ export async function signToken(payload: SessionPayload): Promise<string> {
     adminId: payload.adminId,
     email: payload.email,
     role: payload.role,
-    campusId: payload.campusId ?? null,
+    campusIds: JSON.stringify(
+      Array.isArray(payload.campusIds) ? payload.campusIds : [],
+    ),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.adminId)
@@ -58,8 +60,7 @@ export async function verifyToken(
     if (
       typeof payload.adminId !== "string" ||
       typeof payload.email !== "string" ||
-      typeof payload.role !== "string" ||
-      (payload.campusId !== null && typeof payload.campusId !== "string")
+      typeof payload.role !== "string"
     ) {
       return null;
     }
@@ -68,7 +69,18 @@ export async function verifyToken(
       adminId: payload.adminId,
       email: payload.email,
       role: payload.role as AuthenticatedAdmin["role"],
-      campusId: (payload.campusId as string | null) ?? null,
+      campusIds: (() => {
+        if (typeof payload.campusIds !== "string") return [];
+        try {
+          const campusIds: unknown = JSON.parse(payload.campusIds);
+          return Array.isArray(campusIds) &&
+            campusIds.every((id): id is string => typeof id === "string")
+            ? campusIds
+            : [];
+        } catch {
+          return [];
+        }
+      })(),
       iat: payload.iat!,
       exp: payload.exp!,
     };

@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import { requireAuth, can } from "@/lib/auth/rbac";
 import { db } from "@/db";
 import { students, transcripts, programmes } from "@/db/schema";
-import { and, eq, ilike, or, desc } from "drizzle-orm";
+import { and, eq, ilike, or, desc, inArray } from "drizzle-orm";
 import { assembleTranscript } from "@/lib/transcript";
 import { TranscriptPreview } from "@/components/transcript/preview";
 import { TranscriptActionBar } from "@/components/transcript/action-bar";
@@ -42,8 +42,9 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
     );
 
     // SUPER_ADMIN searches all campuses; others only their campus
-    const campusCondition = session.role !== "SUPER_ADMIN" && session.campusId
-      ? eq(students.campusId, session.campusId)
+    const campusCampusIds = session.campusIds ?? [];
+    const campusCondition = session.role !== "SUPER_ADMIN" && campusCampusIds.length > 0
+      ? inArray(students.campusId, campusCampusIds)
       : undefined;
 
     matched = await db

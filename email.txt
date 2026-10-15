@@ -1,0 +1,33 @@
+# ─── Add these to your .env.local ─────────────────────────────────────────────
+
+# Your app's public URL (used in the reset link sent by email)
+APP_URL=https://your-app.netlify.app
+# For local dev:
+# APP_URL=http://localhost:3000
+
+# Your institution name (appears in the email)
+INSTITUTION_NAME=University of Education, Winneba
+
+# ── Option A: Resend (recommended for production) ─────────────────────────────
+# Sign up free at https://resend.com — 3,000 emails/month free
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+EMAIL_FROM=TMS <noreply@yourdomain.com>
+
+# ── Option B: Gmail SMTP ──────────────────────────────────────────────────────
+# 1. Enable 2-Factor Auth on your Google account
+# 2. Go to myaccount.google.com → Security → App passwords
+# 3. Generate an app password for "Mail"
+# 4. Use that 16-char password as SMTP_PASS (not your login password)
+#
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your@gmail.com
+# SMTP_PASS=xxxx xxxx xxxx xxxx
+# EMAIL_FROM=TMS <your@gmail.com>
+
+# ── Option C: Institutional Outlook / Office 365 ──────────────────────────────
+# SMTP_HOST=smtp.office365.com
+# SMTP_PORT=587
+# SMTP_USER=registrar@institution.edu.gh
+# SMTP_PASS=your-password
+# EMAIL_FROM=TMS <registrar@institution.edu.gh>

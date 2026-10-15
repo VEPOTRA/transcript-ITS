@@ -4,9 +4,9 @@ export default async function AdminIndexPage() {
   await requireRole("SUPER_ADMIN");
 
   const links = [
-    { href: "/admin/institution", label: "Institution",   description: "Name, address, and logo" },
-    { href: "/admin/registrar",   label: "Registrar",     description: "Signatory name, title, and signature" },
-    { href: "/admin/users",       label: "Admin users",   description: "Create and manage admin accounts" },
+    { href: "/admin/institution", label: "Institution", description: "Name, address, and logo" },
+    { href: "/admin/registrar", label: "Registrar", description: "Signatory name, title, and signature" },
+    { href: "/admin/users", label: "Admin users", description: "Create and manage admin accounts" },
     { href: "/admin/grading-scale", label: "Grading scale", description: "View the grade point scale" },
   ];
 

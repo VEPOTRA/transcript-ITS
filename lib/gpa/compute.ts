@@ -106,52 +106,39 @@ export function sumSemesters(semesters: SemesterGPAResult[]): {
  * African universities. Adjust per institution policy if needed.
  *
  * cgpa >= 3.50  → First Class
- * cgpa >= 3.49  → Second Class Upper
- * cgpa >= 2.49  → Second Class Lower
+ * cgpa >= 3.00  → Second Class Upper
+ * cgpa >= 2.50  → Second Class Lower
  * cgpa >= 2.00  → Third Class
  * cgpa >= 1.00  → Pass
  * cgpa  < 1.00  → Fail
  * no results    → "No Results"
  */
-type ClassificationScale = {
-  threshold: number;
-  label: GradeClassification;
-};
-
-const diplomaScale: ClassificationScale[] = [
-  { threshold: 3.5, label: "Distinction" },
-  { threshold: 2.5, label: "Credit" },
-  { threshold: 1.0, label: "Pass" },
-  { threshold: 0, label: "Fail" },
-];
-
-const degreeScale: ClassificationScale[] = [
-  { threshold: 3.5, label: "First Class" },
-  { threshold: 3.0, label: "Second Class Upper" },
-  { threshold: 2.49, label: "Second Class Lower" },
-  { threshold: 2.0, label: "Third Class" },
-  { threshold: 1.0, label: "Pass" },
-  { threshold: 0, label: "Fail" },
-];
-
 export function classifyGPA(
   cgpa: number,
   hasResults: boolean,
   programmeType: import("./types").ProgrammeType = "DEGREE",
   studentType: "UNDERGRADUATE" | "POSTGRADUATE" = "UNDERGRADUATE",
-): GradeClassification | null {
+): GradeClassification {
   // Postgraduate programmes carry no class designation
-  if (studentType === "POSTGRADUATE") return null;
+  if (studentType === "POSTGRADUATE") return "Postgraduate";
 
   if (!hasResults) return "No Results";
 
-  const scale = programmeType === "DIPLOMA" ? diplomaScale : degreeScale;
-
-  for (const { threshold, label } of scale) {
-    if (cgpa >= threshold) return label;
+  if (programmeType === "DIPLOMA") {
+    // Diploma classification scale
+    if (cgpa >= 3.5) return "Distinction";
+    if (cgpa >= 2.5) return "Credit";
+    if (cgpa >= 1.0) return "Pass";
+    return "Fail";
   }
 
-  return null; // fallback, though scale covers all cases
+  // Degree classification scale (default)
+  if (cgpa >= 3.5) return "First Class";
+  if (cgpa >= 3.0) return "Second Class Upper";
+  if (cgpa >= 2.5) return "Second Class Lower";
+  if (cgpa >= 2.0) return "Third Class";
+  if (cgpa >= 1.0) return "Pass";
+  return "Fail";
 }
 
 // ─── Formatting ───────────────────────────────────────────────────────────────
@@ -169,11 +156,8 @@ export function formatSemesterLabel(
   year: number,
   term: "FIRST" | "SECOND",
 ): string {
-  const termLabel =
-    term === "FIRST"
-      ? " Academic Year First Semester"
-      : " Academic Year Second Semester";
-  return `${year}/${year + 1}  ${termLabel}`;
+  const termLabel = term === "FIRST" ? "First Semester" : "Second Semester";
+  return `${year}/${year + 1} – ${termLabel}`;
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
