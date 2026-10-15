@@ -170,6 +170,13 @@ export async function assembleTranscript(
     rowsBySemester.set(row.semesterId, existing);
   }
 
+  // ── Collect all courseIds that have a resit entry (across any semester) ───
+  // Used below to hide the original attempt from the transcript display.
+  // The original still counts in the GPA (SQL aggregate includes it).
+  const resittedCourseIds = new Set<string>(
+    gradeDisplayRows.filter((r) => r.isResit === true).map((r) => r.courseId),
+  );
+
   // ── Build a lookup from semesterId → aggregate row (O(N)) ─────────────────
 
   const aggregateMap = new Map<string, SemesterAggregateRow>(
@@ -234,24 +241,47 @@ export async function assembleTranscript(
     }
 
     // Build typed course rows — course codes ordered by the DB query (ASC)
-    const transcriptCourses: TranscriptCourse[] = courses.map((row) => {
-      const gp = parseFloat(row.gradePoint);
-      const qp = parseFloat(row.computedQualityPoints);
+    //
+    // RESIT DISPLAY RULE:
+    //   If a course has been resitted (resittedCourseIds), hide the original
+    //   attempt from the transcript. The resit entry is shown instead.
+    //   Both still contribute to GPA (handled above in the resit adjustment).
+    const transcriptCourses: TranscriptCourse[] = courses
+      .filter((row) => {
+        // Keep this row if:
+        //   (a) The course has never been resitted — show normally
+        //   (b) This row IS the resit entry — always show it
+        // Hide: original (non-resit) rows for courses that have a resit
+        const courseHasResit = resittedCourseIds.has(row.courseId);
+        return !courseHasResit || row.isResit === true;
+      })
+      .map((row) => {
+        const gp = parseFloat(row.gradePoint);
+        const qp = parseFloat(row.computedQualityPoints);
 
-      return {
-        courseId: row.courseId,
-        courseCode: row.courseCode,
-        courseTitle: row.courseTitle,
-        creditHours: row.creditHours,
-        grade: row.grade,
-        gradePoint: Number.isFinite(gp) ? gp : 0,
-        gradePointFormatted: Number.isFinite(gp) ? gp.toFixed(2) : "0.00",
-        qualityPoints: Number.isFinite(qp) ? qp : 0,
-        qualityPointsFormatted: Number.isFinite(qp) ? qp.toFixed(2) : "0.00",
-        isScoring: row.isScoring !== false, // null treated as true
-        isResit: row.isResit === true,
-      };
-    });
+        // For resit rows: display doubled credit hours and quality points
+        // so the transcript clearly shows the penalty applied
+        const isResit = row.isResit === true;
+        const isScoring = row.isScoring !== false;
+        const displayCredits =
+          isResit && isScoring ? row.creditHours * 2 : row.creditHours;
+        const displayQP =
+          isResit && isScoring && Number.isFinite(qp) ? qp * 2 : qp;
+
+        return {
+          courseId: row.courseId,
+          courseCode: row.courseCode,
+          courseTitle: row.courseTitle,
+          creditHours: row.creditHours,
+          grade: row.grade,
+          gradePoint: Number.isFinite(gp) ? gp : 0,
+          gradePointFormatted: Number.isFinite(gp) ? gp.toFixed(2) : "0.00",
+          qualityPoints: Number.isFinite(qp) ? qp : 0,
+          qualityPointsFormatted: Number.isFinite(qp) ? qp.toFixed(2) : "0.00",
+          isScoring: row.isScoring !== false, // null treated as true
+          isResit: row.isResit === true,
+        };
+      });
 
     semesters.push({
       semesterId: semId,
