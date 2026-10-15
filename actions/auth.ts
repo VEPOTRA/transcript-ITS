@@ -12,7 +12,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { admins, adminCampuses } from "@/db/schema";
+import { admins } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
   comparePassword,
@@ -104,20 +104,23 @@ export async function loginAction(
   // ── Success — clear rate limit and create session ─────────────────────────
   await clearRateLimit(loginRateLimitKey(ip));
 
-  // Load all campus IDs for this admin from the junction table.
-  // Wrapped in try/catch so login still works if the migration hasn't run yet.
+  // Load campus IDs from the junction table — dynamic import so a missing
+  // table or un-updated schema.ts never prevents login.
   let campusIds: string[] = [];
   try {
-    const campusRows = await db
-      .select({ campusId: adminCampuses.campusId })
-      .from(adminCampuses)
-      .where(eq(adminCampuses.adminId, admin.id));
-    campusIds = campusRows.map((r) => r.campusId);
-  } catch (err) {
-    // admin_campuses table doesn't exist yet — run the migration in Neon SQL Editor.
-    // Fallback: SUPER_ADMIN gets full access, others get empty (full) access temporarily.
+    const { adminCampuses } = await import("@/db/schema");
+    if (adminCampuses) {
+      const campusRows = await db
+        .select({ campusId: adminCampuses.campusId })
+        .from(adminCampuses)
+        .where(eq(adminCampuses.adminId, admin.id));
+      campusIds = campusRows.map((r) => r.campusId);
+    }
+  } catch {
+    // admin_campuses table doesn't exist yet — run migration-admin-campuses.sql
+    // Login still succeeds; campus filtering won't be enforced until migration runs.
     console.warn(
-      "[login] admin_campuses table missing — run migration. Defaulting to full access.",
+      "[login] admin_campuses not ready — run migration. Defaulting to full access.",
     );
     campusIds = [];
   }

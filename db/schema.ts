@@ -295,7 +295,6 @@ export const admins = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     email: varchar("email", { length: 255 }).notNull(),
     password: text("password").notNull(),
-    campusId: uuid("campus_id").references(() => campuses.id),
     role: roleEnum("role").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
