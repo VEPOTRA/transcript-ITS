@@ -116,7 +116,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
             ...base,
             maxWidth: "794px",
             margin: "0 auto",
-            background: "white",
+            // background: "white",
             position: "relative",
             overflow: "hidden",
             paddingBottom: "50px",
