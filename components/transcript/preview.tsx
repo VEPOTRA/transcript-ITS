@@ -180,7 +180,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                           letterSpacing: "0.4px",
                           lineHeight: 1.2,
                           textTransform: "uppercase",
-                          marginBottom: "2px",
+                          // marginBottom: "2px",
                           textAlign: "center"
                         }}
                       >
@@ -216,7 +216,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                       fontSize: "14px",
                       fontWeight: 700,
                       padding: "3px",
-                      marginBottom: "8px",
+                      marginBottom: "2px",
                       letterSpacing: "0.5px",
                       textTransform: "uppercase",
                     }}
@@ -245,7 +245,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                     </div>
 
                     {/* Row 2: Date Of Birth + Period + Gender (single line, never wraps) */}
-                    <div style={{ display: "flex", width: "100%", marginTop: "2px" }}>
+                    <div style={{ display: "flex", width: "100%" }}>
                       <div style={{ ...infoLineRowStyle, flex: "0 0 35%", paddingRight: "10px", boxSizing: "border-box", whiteSpace: "nowrap" }}>
                         <span style={infoLineLabelStyle}>Date Of Birth:</span>
                         <span>{formatTranscriptDateOfBirth(student.dateOfBirth)}</span>
@@ -268,7 +268,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                     </div>
 
                     {/* Row 3: Programme (single line, never wraps) */}
-                    <div style={{ ...infoLineRowStyle, width: "100%", marginTop: "2px", whiteSpace: "nowrap" }}>
+                    <div style={{ ...infoLineRowStyle, width: "100%", whiteSpace: "nowrap" }}>
                       <span style={infoLineLabelStyle}>Programme:</span>
                       <span style={{ whiteSpace: "nowrap", textTransform: "uppercase" }}>{student.programme.name}</span>
                     </div>
@@ -283,7 +283,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                       fontSize: "10px",
                       fontWeight: 700,
                       padding: "1px",
-                      margin: "4px 0 1px",
+                      margin: "1px 0 1px",
                     }}
                   >
                     A BLACK AND WHITE DOCUMENT IS NOT OFFICIAL
@@ -323,7 +323,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                       ))}
 
                       {/* ─── Signature block – only on the last page ─── */}
-                      <div className="w-full" style={{ marginTop: "60px" }}>
+                      <div className="w-full" style={{ marginTop: "50px" }}>
                         <div
                           style={{
                             display: "flex",
@@ -335,7 +335,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                             {registrar?.signaturePath && (
                               <div
                                 style={{
-                                  height: "40px",
+                                  height: "0px",
                                   display: "flex",
                                   alignItems: "flex-end",
                                   justifyContent: "center",
@@ -343,22 +343,22 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                                 }}
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
+                                {/* <img
                                   src={registrar.signaturePath}
                                   alt="Signature"
                                   style={{
-                                    maxHeight: "36px",
+                                    maxHeight: "3px",
                                     maxWidth: "120px",
                                     objectFit: "contain",
                                   }}
-                                />
+                                /> */}
                               </div>
                             )}
                             <div
                               style={{
                                 borderTop: "1.5px solid #000",
                                 width: "180px",
-                                margin: "0 auto 2px",
+                                // margin: "0 auto 2px",
                               }}
                             />
                             <div
@@ -437,7 +437,7 @@ function SemesterBlock({
   classification: string | null;
 }) {
   return (
-    <div style={{ marginBottom: "2px", pageBreakInside: "avoid" }}>
+    <div style={{ marginBottom: "1px", pageBreakInside: "avoid" }}>
       {/* Semester heading */}
       <button
         type="button"
@@ -527,7 +527,7 @@ function SemesterBlock({
         {showClassDesignation && (
           <div
             style={{
-              marginTop: "4px",
+              marginTop: "1px",
               fontSize: "11px",
               fontWeight: 400,
             }}
