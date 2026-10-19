@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: "Transcript Management System",
-  description: "Academic transcript management for ITS Students",
+  description: "Academic transcript management for UEW Students",
 };
 
 /**

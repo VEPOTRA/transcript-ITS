@@ -116,7 +116,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
             ...base,
             maxWidth: "794px",
             margin: "0 auto",
-            background: "white",
+            // background: "white",
             position: "relative",
             overflow: "hidden",
             paddingBottom: "50px",
@@ -228,7 +228,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                   <div
                     style={{
                       fontSize: "11px",
-                      marginBottom: "5px",
+                      marginBottom: "3px",
                       width: "100%",
                     }}
                   >
@@ -268,7 +268,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                     </div>
 
                     {/* Row 3: Programme (single line, never wraps) */}
-                    <div style={{ ...infoLineRowStyle, width: "100%", marginTop: "4px", whiteSpace: "nowrap" }}>
+                    <div style={{ ...infoLineRowStyle, width: "100%", marginTop: "2px", whiteSpace: "nowrap" }}>
                       <span style={infoLineLabelStyle}>Programme:</span>
                       <span style={{ whiteSpace: "nowrap", textTransform: "uppercase" }}>{student.programme.name}</span>
                     </div>
@@ -323,7 +323,7 @@ export function TranscriptPreview({ transcript }: TranscriptPreviewProps) {
                       ))}
 
                       {/* ─── Signature block – only on the last page ─── */}
-                      <div className="w-full" style={{ marginTop: "70px" }}>
+                      <div className="w-full" style={{ marginTop: "60px" }}>
                         <div
                           style={{
                             display: "flex",
@@ -437,7 +437,7 @@ function SemesterBlock({
   classification: string | null;
 }) {
   return (
-    <div style={{ marginBottom: "6px", pageBreakInside: "avoid" }}>
+    <div style={{ marginBottom: "2px", pageBreakInside: "avoid" }}>
       {/* Semester heading */}
       <button
         type="button"
@@ -478,17 +478,17 @@ function SemesterBlock({
         >
           <thead>
             <tr>
-              <th style={{ ...thBase, width: "70px", textAlign: "center" }}>
+              <th style={{ ...thBase, width: "65px", textAlign: "center" }}>
                 Course Code
               </th>
               <th style={{ ...thBase, textAlign: "left" }}>Course Title</th>
-              <th style={{ ...thBase, width: "44px", textAlign: "center" }}>
+              <th style={{ ...thBase, width: "45px", textAlign: "center" }}>
                 Credits
               </th>
-              <th style={{ ...thBase, width: "33px", textAlign: "center" }}>
+              <th style={{ ...thBase, width: "35px", textAlign: "center" }}>
                 Grade
               </th>
-              <th style={{ ...thBase, width: "54px", textAlign: "center" }}>
+              <th style={{ ...thBase, width: "60px", textAlign: "center" }}>
                 Grade Point
               </th>
             </tr>
@@ -647,7 +647,7 @@ const thBase: React.CSSProperties = {
 };
 
 const tdBase: React.CSSProperties = {
-  fontSize: "10px",
+  fontSize: "9px",
   padding: "2px 4px",
   border: "0.5px solid #cfcdcd",
   color: "#000",
