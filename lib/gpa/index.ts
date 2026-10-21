@@ -12,9 +12,9 @@
  *
  * ─── What the DB does
  *
- *   • SUM(computed_quality_points)                   — uses the stored product
- *   • SUM(credit_hours)                              — credits attempted
- *   • SUM(CASE WHEN grade != 'F' THEN credit_hours)  — credits earned
+ *   • SUM(computed_quality_points)                   — actual course credit × grade point
+ *   • SUM(credit_hours, doubled for resits)           — credits attempted
+ *   • SUM(passed credit_hours, doubled for resits)    — credits earned
  *   • INNER JOIN courses WHERE is_scoring = true      — excludes non-scoring
  *   • GROUP BY semester_id                            — one row per semester
  *

@@ -99,12 +99,17 @@ grades row stores:
 GPA query (never per-row JS):
   SELECT
     SUM(computed_quality_points),
-    SUM(credit_hours),
-    SUM(CASE WHEN grade != 'F' THEN credit_hours ELSE 0 END)
+    SUM(CASE WHEN is_resit THEN credit_hours * 2 ELSE credit_hours END),
+    SUM(CASE WHEN grade NOT IN ('E', 'IC')
+      THEN CASE WHEN is_resit THEN credit_hours * 2 ELSE credit_hours END
+      ELSE 0 END)
   FROM grades g
   INNER JOIN courses c ON g.course_id = c.id AND c.is_scoring = true
   WHERE g.student_id = $1
   GROUP BY g.semester_id
+
+Resit quality points remain `grade_point × actual credit_hours`; only the
+attempted and earned credits are doubled.
 
 CGPA = sumSemesters(semester rows) — O(semesters), not O(grade rows)
 ```

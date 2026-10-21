@@ -219,33 +219,12 @@ export async function assembleTranscript(
       scoringCourseCount = hydrated.courseCount;
     }
 
-    // ── Resit adjustment ───────────────────────────────────────────────────
-    // Resit attempts count double: credit_hours × 2 in the denominator,
-    // computed_quality_points × 2 in the numerator.
-    // The SQL aggregate already counted them once; here we add the extra.
-    const resitCourses = courses.filter(
-      (r) => r.isResit && r.isScoring !== false,
-    );
-    for (const rc of resitCourses) {
-      const extraQP = parseFloat(rc.computedQualityPoints);
-      const extraCH = rc.creditHours;
-      if (Number.isFinite(extraQP) && extraCH > 0) {
-        totalQualityPoints += extraQP; // double quality points
-        creditsAttempted += extraCH; // double credits attempted
-        if (rc.grade !== "E") creditsEarned += extraCH; // double credits earned (pass only)
-      }
-    }
-    // Recompute SGPA after resit adjustment
-    if (resitCourses.length > 0) {
-      sgpa = computeGPA(totalQualityPoints, creditsAttempted);
-    }
-
     // Build typed course rows — course codes ordered by the DB query (ASC)
     //
     // RESIT DISPLAY RULE:
     //   If a course has been resitted (resittedCourseIds), hide the original
     //   attempt from the transcript. The resit entry is shown instead.
-    //   Both still contribute to GPA (handled above in the resit adjustment).
+    //   Both attempts still contribute to GPA via the aggregate query.
     const transcriptCourses: TranscriptCourse[] = courses
       .filter((row) => {
         // Keep this row if:
@@ -259,20 +238,18 @@ export async function assembleTranscript(
         const gp = parseFloat(row.gradePoint);
         const qp = parseFloat(row.computedQualityPoints);
 
-        // For resit rows: display doubled credit hours and quality points
-        // so the transcript clearly shows the penalty applied
+        // Resits count double credit hours, while quality points use the
+        // actual course credit stored in computedQualityPoints.
         const isResit = row.isResit === true;
         const isScoring = row.isScoring !== false;
         const displayCredits =
           isResit && isScoring ? row.creditHours * 2 : row.creditHours;
-        const displayQP =
-          isResit && isScoring && Number.isFinite(qp) ? qp * 2 : qp;
 
         return {
           courseId: row.courseId,
           courseCode: row.courseCode,
           courseTitle: row.courseTitle,
-          creditHours: row.creditHours,
+          creditHours: displayCredits,
           grade: row.grade,
           gradePoint: Number.isFinite(gp) ? gp : 0,
           gradePointFormatted: Number.isFinite(gp) ? gp.toFixed(2) : "0.00",

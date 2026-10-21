@@ -19,11 +19,11 @@ export type SemesterAggregateRow = {
   semesterTerm: "FIRST" | "SECOND";
   /** SUM(computed_quality_points) — string because PostgreSQL numeric → JS string */
   totalQualityPoints: string;
-  /** SUM(credit_hours) where is_scoring = true */
+  /** Scoring credits attempted; resit credits count double. */
   creditsAttempted: string;
   /**
-   * SUM(credit_hours) WHERE grade != 'F' AND is_scoring = true.
-   * Computed via CASE WHEN inside the SUM — single query pass.
+   * Scoring credits earned where grade is not E/IC; resit credits count
+   * double. Computed via CASE WHEN inside the SUM — single query pass.
    */
   creditsEarned: string;
   /** COUNT(*) of scoring courses — useful for validation / display */

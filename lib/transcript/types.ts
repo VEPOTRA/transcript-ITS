@@ -44,11 +44,13 @@ export type TranscriptCourse = {
   courseId: string;
   courseCode: string;
   courseTitle: string;
+  /** Effective transcript credit; doubled for scoring resit attempts. */
   creditHours: number;
   grade: string; // "A", "B+", etc.
   gradePoint: number; // parsed — 3.5, 3.0, etc.
   gradePointFormatted: string; // "3.50"
-  qualityPoints: number; // parsed computedQualityPoints
+  /** Grade point × actual course credit; not doubled for a resit. */
+  qualityPoints: number;
   qualityPointsFormatted: string; // "10.50"
   /**
    * false = course does not count toward GPA.
