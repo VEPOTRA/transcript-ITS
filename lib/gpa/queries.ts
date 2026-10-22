@@ -15,8 +15,9 @@
  *
  * ─── Credits earned vs credits attempted
  *
- * attempted = all scoring credit hours (including F grades)
- * earned    = scoring credit hours where grade != 'F'
+ * attempted = all scoring credits (resit credits count double)
+ * earned    = passed scoring credits (resit credits count double)
+ * quality points use the actual course credit, including for resits
  *
  * Both are computed in a single pass using CASE WHEN inside SUM —
  * no second query, no subquery, no application-level filtering.
@@ -43,16 +44,25 @@ const sumQualityPoints = sql<string>`
 `.as("total_quality_points");
 
 const sumCreditsAttempted = sql<string>`
-  CAST(SUM(${grades.creditHours}) AS TEXT)
+  CAST(
+    SUM(CASE WHEN ${grades.isResit} THEN ${grades.creditHours} * 2 ELSE ${grades.creditHours} END)
+  AS TEXT)
 `.as("credits_attempted");
 
 /**
- * Credits earned: sum credit hours only where the grade is not F.
+ * Credits earned: sum credit hours only where the grade is not E/IC.
+ * Resit attempts count double credits, but quality points remain based on
+ * the actual course credit stored in computed_quality_points.
  * CASE WHEN evaluated row-by-row inside a single SUM pass — no extra scan.
  */
 const sumCreditsEarned = sql<string>`
   CAST(
-    SUM(CASE WHEN ${grades.grade} NOT IN ('E', 'IC') THEN ${grades.creditHours} ELSE 0 END)
+    SUM(
+      CASE WHEN ${grades.grade} NOT IN ('E', 'IC')
+        THEN CASE WHEN ${grades.isResit} THEN ${grades.creditHours} * 2 ELSE ${grades.creditHours} END
+        ELSE 0
+      END
+    )
   AS TEXT)
 `.as("credits_earned");
 
@@ -75,9 +85,12 @@ const countCourses = sql<string>`
  *     s.year AS semester_year,
  *     s.semester AS semester_term,
  *     CAST(SUM(g.computed_quality_points) AS TEXT) AS total_quality_points,
- *     CAST(SUM(g.credit_hours) AS TEXT) AS credits_attempted,
+ *     CAST(SUM(CASE WHEN g.is_resit THEN g.credit_hours * 2
+ *                   ELSE g.credit_hours END) AS TEXT) AS credits_attempted,
  *     CAST(SUM(CASE WHEN g.grade NOT IN ('E', 'IC')
- *               THEN g.credit_hours ELSE 0 END) AS TEXT) AS credits_earned,
+ *               THEN CASE WHEN g.is_resit THEN g.credit_hours * 2
+ *                         ELSE g.credit_hours END
+ *               ELSE 0 END) AS TEXT) AS credits_earned,
  *     CAST(COUNT(*) AS TEXT) AS course_count
  *   FROM grades g
  *   INNER JOIN courses  c ON g.course_id  = c.id  AND c.is_scoring = true
@@ -135,8 +148,12 @@ export async function querySemesterAggregate(
  *     s.year                                                AS semester_year,
  *     s.semester                                            AS semester_term,
  *     CAST(SUM(g.computed_quality_points) AS TEXT)          AS total_quality_points,
- *     CAST(SUM(g.credit_hours) AS TEXT)                     AS credits_attempted,
- *     CAST(SUM(CASE WHEN g.grade NOT IN ('E', 'IC') THEN g.credit_hours ELSE 0 END) AS TEXT) AS credits_earned,
+ *     CAST(SUM(CASE WHEN g.is_resit THEN g.credit_hours * 2
+ *                   ELSE g.credit_hours END) AS TEXT)       AS credits_attempted,
+ *     CAST(SUM(CASE WHEN g.grade NOT IN ('E', 'IC')
+ *               THEN CASE WHEN g.is_resit THEN g.credit_hours * 2
+ *                         ELSE g.credit_hours END
+ *               ELSE 0 END) AS TEXT)                        AS credits_earned,
  *     CAST(COUNT(*) AS TEXT)                                AS course_count
  *   FROM grades g
  *   INNER JOIN courses  c ON g.course_id  = c.id  AND c.is_scoring = true

@@ -15,7 +15,7 @@
  * ║  3. computedQualityPoints is NEVER accepted from the client.    ║
  * ║     It is always computed as gradePoint × creditHours here.     ║
  * ║                                                                  ║
- * ║  The client submits ONLY: studentId, courseId, semesterId, grade ║
+ * ║  Client: studentId, courseId, semesterId, grade, isResit.       ║
  * ╚══════════════════════════════════════════════════════════════════╝
  *
  * Grade corrections use a supersede pattern — the old row is marked
@@ -41,8 +41,8 @@ import { parseDbError, withAction } from "@/lib/actions/utils";
 import type { ActionState } from "@/types/auth";
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
-// Only the four fields the client is allowed to submit.
-// creditHours / gradePoint / computedQualityPoints are absent by design.
+// Client-supplied GPA values are absent by design; isResit is the sole
+// additional grade-entry option persisted from the form.
 
 const gradeInputSchema = z.object({
   studentId: z
@@ -59,6 +59,7 @@ const gradeInputSchema = z.object({
     invalid_type_error: "Grade is required",
     message: `Grade must be one of: ${GRADE_LETTERS.join(", ")}`,
   }),
+  isResit: z.boolean(),
 });
 
 // ─── Internal: fetch and compute server-side values ───────────────────────────
@@ -110,12 +111,13 @@ export async function createGradeAction(
   return withAction(async () => {
     const session = await assertPermission("enter_grades");
 
-    // Step 1: validate the four allowed client fields
+    // Step 1: validate the grade fields and resit toggle
     const parsed = gradeInputSchema.safeParse({
       studentId: formData.get("studentId"),
       courseId: formData.get("courseId"),
       semesterId: formData.get("semesterId"),
       grade: formData.get("grade"),
+      isResit: formData.get("isResit") === "true",
     });
 
     if (!parsed.success) {
@@ -126,7 +128,7 @@ export async function createGradeAction(
       };
     }
 
-    const { studentId, courseId, semesterId, grade } = parsed.data;
+    const { studentId, courseId, semesterId, grade, isResit } = parsed.data;
 
     // Step 2: verify student exists
     const student = await db
@@ -166,6 +168,7 @@ export async function createGradeAction(
           gradePoint: computed.gradePoint,
           creditHours: computed.creditHours,
           computedQualityPoints: computed.computedQualityPoints,
+          isResit,
         })
         .returning();
     } catch (err) {
@@ -207,6 +210,7 @@ export async function createGradeAction(
         gradePoint: computed.gradePoint,
         creditHours: computed.creditHours,
         computedQualityPoints: computed.computedQualityPoints,
+        isResit,
       },
       ...meta,
     });
@@ -306,6 +310,7 @@ export async function correctGradeAction(
             gradePoint: gradePoint.toFixed(2),
             creditHours: old.creditHours, // snapshot preserved
             computedQualityPoints: qualityPts.toFixed(2),
+            isResit: old.isResit,
           })
           .returning();
       });
@@ -340,6 +345,7 @@ export async function correctGradeAction(
         grade: newGrade,
         gradePoint: gradePoint.toFixed(2),
         computedQualityPoints: qualityPts.toFixed(2),
+        isResit: old.isResit,
         newGradeId: newRecord!.id,
       },
       ...meta,
