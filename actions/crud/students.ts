@@ -24,17 +24,24 @@ const studentSchema = z.object({
     .default("UNDERGRADUATE"),
   campusId: z.string().uuid("Invalid campus ID").optional(),
   dateOfBirth: z.string().nullable().optional(),
-  gender: z.enum(["MALE", "FEMALE", "OTHER"]).nullable().optional(),
+  gender: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+      const normalized = value.trim().toUpperCase();
+      if (normalized === "M") return "MALE";
+      if (normalized === "F") return "FEMALE";
+      if (normalized === "O") return "OTHER";
+      return normalized;
+    },
+    z.enum(["MALE", "FEMALE", "OTHER"]).nullable().optional(),
+  ),
   programmeId: z.string().uuid(),
   level: z.coerce.number().int().min(100).max(900),
   entryYear: z.coerce.string().min(4).max(15),
-  graduationYear: z.coerce
-    .number()
-    .int()
-    .min(1990)
-    .max(2099)
-    .nullable()
-    .optional(),
+  graduationYear: z.preprocess(
+    (value) => (value === null || value === "" ? null : value),
+    z.coerce.number().int().min(1990).max(2099).nullable().optional(),
+  ),
   email: z.string().email().nullable().optional(),
   phoneNumber: z.string().nullable().optional(),
 });

@@ -35,15 +35,22 @@ async function insertBatch(batch: ValidGradeRow[]): Promise<BatchResult> {
           | "D+"
           | "D"
           | "E"
-          | "IC",
+          | "F"
+          | "IC"
+          | "P",
         gradePoint: Number(row.gradePoint).toFixed(2),
         creditHours: row.creditHours,
         computedQualityPoints: Number(row.computedQualityPoints).toFixed(2),
+        isResit: row.isResit,
         isSuperseded: false,
       })),
     );
     return { succeeded: batch.length, failures: [] };
-  } catch {
+  } catch (err) {
+    console.warn(
+      "[runGradeBulkInsertPipeline] Batch insert failed; retrying rows individually.",
+      err,
+    );
     return insertBatchRowByRow(batch);
   }
 }
@@ -69,10 +76,13 @@ async function insertBatchRowByRow(
           | "D+"
           | "D"
           | "E"
-          | "IC",
+          | "F"
+          | "IC"
+          | "P",
         gradePoint: Number(row.gradePoint).toFixed(2),
         creditHours: row.creditHours,
         computedQualityPoints: Number(row.computedQualityPoints).toFixed(2),
+        isResit: row.isResit,
         isSuperseded: false,
       });
       succeeded++;
@@ -87,9 +97,11 @@ async function insertBatchRowByRow(
         rawValues: {
           indexNumber: row.indexNumber,
           courseCode: row.courseCode,
+          courseCategory: row.courseCategory,
           semester: row.semester,
           year: String(row.year),
           grade: row.grade,
+          isResit: String(row.isResit),
         },
         errors: [message],
       });

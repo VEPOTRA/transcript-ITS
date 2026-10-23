@@ -224,7 +224,7 @@ function ResultPanel({
               <table className="min-w-full divide-y divide-red-100 text-xs">
                 <thead className="bg-red-50">
                   <tr>
-                    {["Row", "Index no.", "Course", "Semester", "Year", "Grade", "Errors"].map((h) => (
+                    {["Row", "Index no.", "Course", "Category", "Semester", "Year", "Grade", "Errors"].map((h) => (
                       <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-semibold uppercase tracking-wide text-red-700">{h}</th>
                     ))}
                   </tr>
@@ -235,6 +235,7 @@ function ResultPanel({
                       <td className="px-3 py-2 font-mono text-gray-500">{f.rowNumber}</td>
                       <td className="px-3 py-2 font-medium text-gray-800">{f.rawValues.indexNumber || <span className="italic text-gray-400">empty</span>}</td>
                       <td className="px-3 py-2 text-gray-600">{f.rawValues.courseCode  || "—"}</td>
+                      <td className="px-3 py-2 text-gray-600">{f.rawValues.courseCategory || "—"}</td>
                       <td className="px-3 py-2 text-gray-600">{f.rawValues.semester    || "—"}</td>
                       <td className="px-3 py-2 text-gray-600">{f.rawValues.year        || "—"}</td>
                       <td className="px-3 py-2 font-mono font-bold text-gray-800">{f.rawValues.grade || "—"}</td>
@@ -266,8 +267,8 @@ function ResultPanel({
           Upload another file
         </button>
         {result.successCount > 0 && (
-          <a href="/students" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-            View student results
+          <a href="/grades" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            View grades
           </a>
         )}
       </div>

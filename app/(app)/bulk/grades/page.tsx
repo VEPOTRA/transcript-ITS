@@ -72,9 +72,10 @@ export default async function GradeBulkUploadPage() {
               {[
                 ["indexNumber", true, "Must match an existing student index number"],
                 ["courseCode", true, "Must match an existing active course code"],
+                ["courseCategory", false, "Required when the course code exists in multiple categories"],
                 ["semester", true, "FIRST or SECOND (also accepts 1 / 2 / first / second)"],
                 ["year", true, "4-digit academic year, e.g. 2021 for 2021/2022"],
-                ["grade", true, `One of: ${GRADE_LETTERS.join(", ")}`],
+                ["grade", true, `One of: ${GRADE_LETTERS.join(", ")}. P/F only for non-scoring courses`],
               ].map(([col, req, note]) => (
                 <tr key={col as string}>
                   <td className="px-3 py-2 font-mono font-medium text-gray-800">{col as string}</td>

@@ -16,8 +16,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
 import { COOKIE_NAME } from "@/lib/auth/config";
 import { can } from "@/lib/auth/rbac";
-import { generateErrorReportCSV } from "@/lib/bulk/report";
-import type { RowFailure } from "@/lib/bulk/types";
+import { generateErrorReportCSV } from "@/lib/bulk/students/report";
+import type { RowFailure } from "@/lib/bulk/students/types";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const token = request.cookies.get(COOKIE_NAME)?.value;

@@ -8,6 +8,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
 import { COOKIE_NAME } from "@/lib/auth/config";
+import { can } from "@/lib/auth/permissions";
 import { db } from "@/db";
 import { students, programmes, campuses } from "@/db/schema";
 import { eq, ilike, or, and, inArray, sql } from "drizzle-orm";
@@ -18,25 +19,25 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = token ? await verifyToken(token) : null;
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!can(session, "view_grades") && !can(session, "enter_grades"))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // ── Parse query ─────────────────────────────────────────────────────────────
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
-  const limit = Math.min(
-    Number(req.nextUrl.searchParams.get("limit") ?? 10),
-    50,
-  );
+  const requestedLimit = Number(req.nextUrl.searchParams.get("limit") ?? 10);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.max(1, Math.min(Math.floor(requestedLimit), 50))
+    : 10;
 
   if (q.length < 2) return NextResponse.json([]);
+  if (q.length > 100)
+    return NextResponse.json({ error: "Search query is too long." }, { status: 400 });
 
   const pattern = `%${q}%`;
 
   // ── Campus filter ────────────────────────────────────────────────────────────
-  const campusIds =
-    session.role === "SUPER_ADMIN"
-      ? null
-      : session.campusIds
-        ? session.campusIds
-        : [];
+  const campusIds = session.role === "SUPER_ADMIN" ? null : session.campusIds;
+  if (campusIds && campusIds.length === 0) return NextResponse.json([]);
 
   // ── Search ───────────────────────────────────────────────────────────────────
   const searchWhere = or(
@@ -56,14 +57,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       id: students.id,
       indexNumber: students.indexNumber,
       firstName: students.firstName,
-      middleName: students.middleName,
       lastName: students.lastName,
-      studentType: students.studentType,
-      campusId: students.campusId,
-      programmeId: students.programmeId,
       programmeName: programmes.name,
-      level: students.level,
-      status: students.status,
     })
     .from(students)
     .leftJoin(programmes, eq(students.programmeId, programmes.id))

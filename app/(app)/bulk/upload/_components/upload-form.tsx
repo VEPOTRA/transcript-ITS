@@ -18,8 +18,8 @@
  */
 
 import { useState, useRef, useCallback } from "react";
-import { formatUploadSummary } from "@/lib/bulk/report";
-import type { BulkUploadResult, RowFailure } from "@/lib/bulk/types";
+import { formatUploadSummary } from "@/lib/bulk/students/report";
+import type { BulkUploadResult, RowFailure } from "@/lib/bulk/students/types";
 
 type UploadState =
   | { phase: "idle" }

@@ -51,6 +51,22 @@ const STATUS_BADGE: Record<string, "green" | "gray" | "red"> = {
   WITHDRAWN: "red",
 };
 
+function genderFormValue(gender: string | null): string {
+  switch (gender?.trim().toUpperCase()) {
+    case "M":
+    case "MALE":
+      return "MALE";
+    case "F":
+    case "FEMALE":
+      return "FEMALE";
+    case "O":
+    case "OTHER":
+      return "OTHER";
+    default:
+      return "";
+  }
+}
+
 export function StudentsClient({ initial, programmes, campuses, initialQuery = "" }: Props) {
   const toast = useToast();
   const router = useRouter();
@@ -353,7 +369,7 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Gender">
-                <Select name="gender" defaultValue={editing.gender ?? ""}>
+                <Select name="gender" defaultValue={genderFormValue(editing.gender)}>
                   <option value="">— Select —</option>
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>

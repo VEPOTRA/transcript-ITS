@@ -1,7 +1,7 @@
 /**
  * Grade bulk upload type definitions.
  *
- * Mirrors the structure of lib/bulk/types.ts but scoped entirely to
+ * Mirrors the structure of lib/bulk/students/types.ts but scoped entirely to
  * the grades pipeline. Types do not share rawValues keys with the
  * student pipeline — they describe different CSV columns.
  *
@@ -18,9 +18,11 @@
 export const GRADE_CSV_COLUMNS = [
   "indexNumber",
   "courseCode",
+  "courseCategory",
   "semester",
   "year",
   "grade",
+  "isResit",
 ] as const;
 
 export type GradeCSVColumn = (typeof GRADE_CSV_COLUMNS)[number];
@@ -36,9 +38,11 @@ export type RawGradeRow = {
   rawLine: string;
   indexNumber: string | undefined;
   courseCode: string | undefined;
+  courseCategory: string | undefined;
   semester: string | undefined; // raw string — may be "FIRST", "first", "1", etc.
   year: string | undefined;
   grade: string | undefined;
+  isResit: string | undefined;
 };
 
 // ─── Valid row (after validation + entity resolution) ─────────────────────────
@@ -63,9 +67,11 @@ export type ValidGradeRow = {
   // Raw CSV values — kept for audit log and error recovery
   indexNumber: string;
   courseCode: string;
+  courseCategory: string;
   semester: "FIRST" | "SECOND";
   year: number;
   grade: string; // the letter grade: "A", "B+", etc.
+  isResit: boolean;
 
   // Server-computed — NEVER from the client / CSV
   gradePoint: string; // toFixed(2) string for DB numeric column

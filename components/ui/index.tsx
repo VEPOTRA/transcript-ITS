@@ -231,9 +231,9 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const BTN: Record<ButtonVariant, string> = {
-  primary: "bg-gray-900 text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200",
-  secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700",
-  ghost: "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800",
+  primary: "bg-[#174f78] text-white hover:bg-[#103d5e] dark:bg-[#22678f] dark:hover:bg-[#2c78a3]",
+  secondary: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
+  ghost: "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800",
   danger: "bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600",
 };
 
@@ -248,8 +248,8 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       className={[
-        "inline-flex items-center justify-center rounded-lg font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2",
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent))] focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-50",
         BTN[variant],
         BTN_SIZE[size],
@@ -309,12 +309,10 @@ export function Field({ label, error, hint, required, className, children }: Fie
 }
 
 const INPUT_BASE = [
-  "block w-full rounded-lg border px-3 py-2 text-sm transition-colors",
-  "bg-white text-gray-900 placeholder:text-gray-400",
-  "border-gray-300 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900",
-  "dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700",
-  "dark:focus:border-gray-400 dark:focus:ring-gray-400",
-  "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60 dark:disabled:bg-gray-800",
+  "block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors",
+  "bg-white placeholder:text-slate-400 focus:border-[hsl(var(--accent))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--accent)/0.15)]",
+  "dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500",
+  "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60 dark:disabled:bg-slate-900",
 ].join(" ");
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
@@ -333,7 +331,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function Table({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
           {children}
@@ -344,19 +342,19 @@ export function Table({ children }: { children: React.ReactNode }) {
 }
 
 export function Thead({ children }: { children: React.ReactNode }) {
-  return <thead className="bg-gray-50 dark:bg-gray-800/50">{children}</thead>;
+  return <thead className="bg-slate-50 dark:bg-slate-900">{children}</thead>;
 }
 
 export function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 ${className}`}>
+    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${className}`}>
       {children}
     </th>
   );
 }
 
 export function Tbody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y divide-gray-50 bg-white dark:divide-gray-800/50 dark:bg-gray-900">{children}</tbody>;
+  return <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">{children}</tbody>;
 }
 
 export function Tr({
@@ -369,7 +367,7 @@ export function Tr({
   return (
     <tr
       onClick={onClick}
-      className={`transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 ${onClick ? "cursor-pointer" : ""} ${className}`}
     >
       {children}
     </tr>
@@ -383,7 +381,7 @@ export function Td({
   className?: string;
 }) {
   return (
-    <td className={`px-4 py-3 text-gray-700 dark:text-gray-300 ${className}`}>
+    <td className={`px-4 py-3 text-slate-700 dark:text-slate-300 ${className}`}>
       {children}
     </td>
   );
@@ -399,12 +397,12 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 py-16 text-center dark:border-gray-700 dark:bg-gray-900/30">
-      <div className="mb-3 rounded-full bg-gray-100 p-3 dark:bg-gray-800">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 py-16 text-center dark:border-slate-700 dark:bg-slate-900/50">
+      <div className="mb-3 rounded-full bg-slate-100 p-3 dark:bg-slate-800">
         <EmptyIcon />
       </div>
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</p>
-      {description && <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">{description}</p>}
+      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</p>
+      {description && <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -420,11 +418,12 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h1>
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
+      <div className="min-w-0">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--accent))] dark:text-sky-300">Academic records</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>
         {description && (
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}

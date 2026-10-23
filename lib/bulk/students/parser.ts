@@ -1,5 +1,5 @@
 /**
- * CSV parser — zero dependencies.
+ * Student CSV parser — zero dependencies.
  *
  * Handles the full RFC 4180 subset that spreadsheet tools produce:
  *   - Quoted fields (commas and newlines inside quotes are preserved)

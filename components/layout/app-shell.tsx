@@ -1,23 +1,10 @@
 "use client";
 
-/**
- * AppShell — redesigned authenticated layout.
- *
- * Changes from v1:
- *  - Indigo accent colour throughout (replaces flat gray)
- *  - Grouped navigation sections (main / academic / system)
- *  - Active link has left accent bar + filled background
- *  - Topbar shows page title + current time
- *  - User avatar with initials (not just first letter)
- *  - Role badge styled by role level
- *  - Smooth sidebar slide animation on mobile
- *  - Profile + password link in user footer
- */
-
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { logoutAction } from "@/actions/auth";
+import { can, type Permission } from "@/lib/auth/permissions";
 import type { AuthenticatedAdmin } from "@/types/auth";
 
 // ─── Nav structure ────────────────────────────────────────────────────────────
@@ -26,7 +13,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
-  roles?: string[];
+  permission?: Permission;
   exact?: boolean;
 };
 
@@ -39,38 +26,38 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Main",
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: <DashIcon />, exact: true },
-      { href: "/transcripts", label: "Transcripts", icon: <TranscriptIcon /> },
-      { href: "/students", label: "Students", icon: <StudentsIcon /> },
+      { href: "/dashboard", label: "Overview", icon: <DashIcon />, exact: true },
+      { href: "/transcripts", label: "Transcripts", icon: <TranscriptIcon />, permission: "view_transcripts" },
+      { href: "/students", label: "Students", icon: <StudentsIcon />, permission: "search_students" },
     ],
   },
   {
     label: "Academic",
     items: [
-      { href: "/grades", label: "Grades", icon: <GradeIcon />, roles: ["SUPER_ADMIN", "ADMIN"] },
-      { href: "/programmes", label: "Programmes", icon: <ProgrammeIcon />, roles: ["SUPER_ADMIN", "ADMIN"] },
-      { href: "/courses", label: "Courses", icon: <CourseIcon />, roles: ["SUPER_ADMIN", "ADMIN"] },
-      { href: "/semesters", label: "Semesters", icon: <CalIcon />, roles: ["SUPER_ADMIN", "ADMIN"] },
-      // { href: "/admin/campuses", label: "Campuses", icon: <CapIcon />, roles: ["SUPER_ADMIN"] },
+      { href: "/grades", label: "Grades", icon: <GradeIcon />, permission: "view_grades" },
+      { href: "/programmes", label: "Programmes", icon: <ProgrammeIcon />, permission: "manage_programmes" },
+      { href: "/courses", label: "Courses", icon: <CourseIcon />, permission: "manage_courses" },
+      { href: "/semesters", label: "Semesters", icon: <CalIcon />, permission: "manage_courses" },
+      { href: "/templates", label: "Data templates", icon: <UploadIcon />, permission: "bulk_upload" },
     ],
   },
   {
     label: "System",
     items: [
-      { href: "/bulk", label: "Bulk upload", icon: <UploadIcon />, roles: ["SUPER_ADMIN", "ADMIN"] },
-      { href: "/audit", label: "Audit log", icon: <AuditIcon />, roles: ["SUPER_ADMIN", "ADMIN"] },
-      { href: "/admin", label: "Admin", icon: <AdminIcon />, roles: ["SUPER_ADMIN"] },
+      { href: "/bulk", label: "Bulk import", icon: <UploadIcon />, permission: "bulk_upload" },
+      { href: "/audit", label: "Audit log", icon: <AuditIcon />, permission: "view_audit_logs" },
+      { href: "/admin", label: "Administration", icon: <AdminIcon />, permission: "manage_users" },
     ],
   },
 ];
 
 // ─── Role colours ─────────────────────────────────────────────────────────────
 
-const ROLE_STYLES: Record<string, string> = {
-  SUPER_ADMIN: "bg-rose-100   text-rose-700   dark:bg-rose-950   dark:text-rose-300",
-  ADMIN: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
-  VIEWER: "bg-gray-100   text-gray-600   dark:bg-gray-800   dark:text-gray-400",
-};
+// const ROLE_STYLES: Record<AuthenticatedAdmin["role"], string> = {
+//   SUPER_ADMIN: "bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200",
+//   ADMIN: "bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200",
+//   VIEWER: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+// };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,9 +70,11 @@ type Props = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AppShell({ session, children, pathname }: Props) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, setDark] = useState(false);
-  const [time, setTime] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [clock, setClock] = useState("");
 
   // Dark mode
   useEffect(() => {
@@ -95,19 +84,41 @@ export function AppShell({ session, children, pathname }: Props) {
     document.documentElement.classList.toggle("dark", isDark);
   }, []);
 
-  const toggleDark = useCallback(() => {
+  useEffect(() => {
+    const updateClock = () =>
+      setClock(
+        new Intl.DateTimeFormat("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Africa/Accra",
+        }).format(new Date()),
+      );
+    updateClock();
+    const timer = window.setInterval(updateClock, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function handleGlobalSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = globalSearch.trim();
+    if (query.length < 2) return;
+    router.push(`/students?q=${encodeURIComponent(query)}`);
+    setGlobalSearch("");
+  }
+
+  const toggleDark = () => {
     const next = !dark;
     setDark(next);
     localStorage.setItem("tms-theme", next ? "dark" : "light");
     document.documentElement.classList.toggle("dark", next);
-  }, [dark]);
+  };
 
-  // Live clock
   useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
-    tick();
-    const id = setInterval(tick, 10_000);
-    return () => clearInterval(id);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
 
   const initials = session.email
@@ -120,78 +131,88 @@ export function AppShell({ session, children, pathname }: Props) {
   const pageLabel = getPageLabel(pathname);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
 
       {/* Mobile backdrop */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-30 cursor-default bg-slate-950/35 backdrop-blur-[1px] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <aside className={[
-        "fixed inset-y-0 left-0 z-40 flex w-64 flex-col",
-        "bg-white dark:bg-gray-900",
-        "border-r border-gray-200 dark:border-gray-800",
+        "fixed inset-y-0 left-0 z-40 flex w-60 flex-col",
+        "bg-white dark:bg-slate-900",
+        "border-r border-slate-200 dark:border-slate-800",
         "transition-transform duration-300 ease-in-out",
         "lg:relative lg:translate-x-0",
         sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
       ].join(" ")}>
 
         {/* Logo bar */}
-        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-gray-100 px-5 dark:border-gray-800">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 shadow-sm shadow-indigo-200 dark:shadow-indigo-900">
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#174f78] text-white shadow-sm">
             <CapIcon />
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">TMS</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Academic Records</p>
+          <div className="flex items-baseline gap-1.5">
+            <p className="text-sm font-bold leading-none text-slate-900 dark:text-white">TMS</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Academic</p>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <nav aria-label="Main navigation" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {NAV_GROUPS.map((group) => {
             const visible = group.items.filter(
-              (item) => !item.roles || item.roles.includes(session.role)
+              (item) => !item.permission || can(session, item.permission)
             );
             if (visible.length === 0) return null;
             return (
               <div key={group.label}>
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
                   {group.label}
                 </p>
                 <ul className="space-y-0.5">
                   {visible.map((item) => {
                     const active = item.exact
                       ? pathname === item.href
-                      : pathname.startsWith(item.href);
+                      : pathname === item.href ||
+                      (item.href !== "/" && pathname.startsWith(`${item.href}/`));
                     return (
                       <li key={item.href}>
-                        <a
+                        <Link
                           href={item.href}
                           onClick={() => setSidebarOpen(false)}
+                          aria-current={active ? "page" : undefined}
                           className={[
-                            "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                            "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                             active
-                              ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
-                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-100",
+                              ? "bg-[#eaf2f8] text-[#174f78] dark:bg-sky-950/40 dark:text-sky-200"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white",
                           ].join(" ")}
                         >
                           {/* Active bar */}
                           {active && (
-                            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-indigo-600 dark:bg-indigo-400" />
+                            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-[hsl(var(--brand-gold))] dark:bg-amber-300" />
                           )}
                           <span className={[
                             "h-4 w-4 shrink-0 transition-colors",
-                            active ? "text-indigo-600 dark:text-indigo-400" : "",
+                            active ? "text-[#174f78] dark:text-sky-300" : "",
                           ].join(" ")}>
                             {item.icon}
                           </span>
                           {item.label}
-                        </a>
+                        </Link>
                       </li>
                     );
                   })}
@@ -202,13 +223,13 @@ export function AppShell({ session, children, pathname }: Props) {
         </nav>
 
         {/* User footer */}
-        <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 p-3 space-y-1">
+        <div className="shrink-0 space-y-1 border-t border-slate-200 p-3 dark:border-slate-800">
           {/* Profile link */}
-          <a href="/profile"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group">
+          <Link href="/profile"
+            className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
             <div className={[
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-              "bg-indigo-600 text-white",
+              "bg-[#174f78] text-white",
             ].join(" ")}>
               {initials || session.email[0].toUpperCase()}
             </div>
@@ -216,26 +237,26 @@ export function AppShell({ session, children, pathname }: Props) {
               <p className="truncate text-xs font-semibold text-gray-900 dark:text-gray-100">
                 {session.email}
               </p>
-              <div className="flex items-center gap-1 flex-wrap">
+              {/* <div className="mt-1 flex flex-wrap items-center gap-1">
                 <span className={[
                   "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  // ROLE_STYLES[session.role] ?? ROLE_STYLES.VIEWER,
+                  ROLE_STYLES[session.role],
                 ].join(" ")}>
                   {session.role.replace("_", " ")}
                 </span>
-                {(session as any).campusName && (
-                  <span className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                    {(session as any).campusName}
+                {(session.role === "SUPER_ADMIN" || session.campusIds.length > 0) && (
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                    {session.role === "SUPER_ADMIN" ? "All campuses" : `${session.campusIds.length} campus${session.campusIds.length === 1 ? "" : "es"}`}
                   </span>
                 )}
-              </div>
+              </div> */}
             </div>
-          </a>
+          </Link>
 
           {/* Sign out */}
           <form action={logoutAction}>
             <button type="submit"
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-red-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-red-400 transition-colors">
+              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-red-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-red-300">
               <LogoutIcon />
               Sign out
             </button>
@@ -247,7 +268,7 @@ export function AppShell({ session, children, pathname }: Props) {
       <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Topbar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 dark:border-gray-800 dark:bg-gray-900">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 dark:border-slate-800 dark:bg-slate-900">
 
           {/* Left: hamburger + page title */}
           <div className="flex items-center gap-3">
@@ -261,22 +282,36 @@ export function AppShell({ session, children, pathname }: Props) {
             <div className="hidden lg:block">
               <Breadcrumb pathname={pathname} />
             </div>
-            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 lg:hidden">
+            <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 lg:hidden">
               {pageLabel}
             </h1>
           </div>
 
-          {/* Right: clock + dark mode */}
-          <div className="flex items-center gap-1">
-            {time && (
-              <span className="hidden sm:flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                <ClockIcon />
-                {time}
-              </span>
+          <div className="flex items-center gap-2">
+            {can(session, "search_students") && (
+              <form onSubmit={handleGlobalSearch} className="relative hidden sm:block">
+                <label htmlFor="global-search" className="sr-only">Search students</label>
+                <svg className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="11" cy="11" r="7" />
+                  <path strokeLinecap="round" d="m20 20-4-4" />
+                </svg>
+                <input
+                  id="global-search"
+                  type="search"
+                  value={globalSearch}
+                  onChange={(event) => setGlobalSearch(event.target.value)}
+                  placeholder="Search..."
+                  className="w-44 rounded-full border-0 bg-slate-100 py-2 pl-9 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-[#174f78]/20 dark:bg-slate-800 dark:text-slate-200 sm:w-52"
+                />
+              </form>
             )}
+            <span className="hidden items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1.5 text-[11px] font-medium tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300 md:inline-flex">
+              <ClockIcon />
+              {clock || "--:--"}
+            </span>
             <button
               onClick={toggleDark}
-              className="ml-1 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+              className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               aria-label="Toggle dark mode"
             >
               {dark ? <SunIcon /> : <MoonIcon />}
@@ -285,8 +320,8 @@ export function AppShell({ session, children, pathname }: Props) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <main id="main-content" className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
             {children}
           </div>
         </main>
@@ -298,34 +333,43 @@ export function AppShell({ session, children, pathname }: Props) {
 // ─── Breadcrumb ───────────────────────────────────────────────────────────────
 
 const LABELS: Record<string, string> = {
-  dashboard: "Dashboard", students: "Students", programmes: "Programmes",
+  dashboard: "Overview", students: "Students", programmes: "Programmes",
   courses: "Courses", semesters: "Semesters", grades: "Grades",
-  transcripts: "Transcripts", bulk: "Bulk upload", upload: "Upload",
-  audit: "Audit log", admin: "Admin", users: "Users",
-  enter: "Enter grades", templates: "Templates", profile: "My profile",
+  transcripts: "Transcripts", bulk: "Bulk import", upload: "Student import",
+  audit: "Audit log", admin: "Administration", users: "Users",
+  enter: "Enter grades", templates: "Data templates", profile: "My profile",
+  institution: "Institution", registrar: "Registrar", campuses: "Campuses",
+  "grading-scale": "Grading scale",
 };
 
 function getPageLabel(pathname: string) {
   const segs = pathname.split("/").filter(Boolean);
-  return LABELS[segs[segs.length - 1] ?? ""] ?? "TMS";
+  const last = segs[segs.length - 1] ?? "";
+  if (last === "new") return "New user";
+  if (/^[\da-f]{8}-[\da-f-]{27,}$/i.test(last)) {
+    return segs.includes("transcripts") ? "Transcript record" : "Student record";
+  }
+  return LABELS[last] ?? "Academic records";
 }
 
 function Breadcrumb({ pathname }: { pathname: string }) {
   const segs = pathname.split("/").filter(Boolean);
   return (
-    <nav className="flex items-center gap-1 text-sm">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm">
       {segs.map((seg, i) => {
         const isLast = i === segs.length - 1;
-        const label = LABELS[seg] ?? seg;
+        const label = isLast
+          ? getPageLabel(pathname)
+          : LABELS[seg] ?? seg;
         return (
-          <span key={seg} className="flex items-center gap-1">
+          <span key={`${seg}-${i}`} className="flex items-center gap-1">
             {i > 0 && <ChevronIcon />}
             {isLast
-              ? <span className="font-semibold text-gray-900 dark:text-gray-100">{label}</span>
-              : <a href={"/" + segs.slice(0, i + 1).join("/")}
-                className="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors">
+              ? <span aria-current="page" className="font-semibold text-slate-900 dark:text-slate-100">{label}</span>
+              : <Link href={"/" + segs.slice(0, i + 1).join("/")}
+                className="text-slate-500 transition-colors hover:text-[#174f78] dark:text-slate-400 dark:hover:text-sky-300">
                 {label}
-              </a>
+              </Link>
             }
           </span>
         );

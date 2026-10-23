@@ -25,10 +25,10 @@ import { verifyToken } from "@/lib/auth/jwt";
 import { COOKIE_NAME } from "@/lib/auth/config";
 import { can } from "@/lib/auth/rbac";
 import { logAuditEvent, extractRequestMeta } from "@/lib/audit";
-import { parseStudentCSV } from "@/lib/bulk/parser";
-import { validateBatch } from "@/lib/bulk/validator";
-import { runStudentBulkInsertPipeline } from "@/lib/bulk/pipeline";
-import type { BulkUploadResult } from "@/lib/bulk/types";
+import { parseStudentCSV } from "@/lib/bulk/students/parser";
+import { validateBatch } from "@/lib/bulk/students/validator";
+import { runStudentBulkInsertPipeline } from "@/lib/bulk/students/pipeline";
+import type { BulkUploadResult } from "@/lib/bulk/students/types";
 
 const MAX_FILE_SIZE_BYTES = 80 * 1024 * 1024; // 80 MB
 const MAX_ROW_COUNT = 1_000_000;

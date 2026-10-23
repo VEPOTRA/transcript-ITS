@@ -1,5 +1,5 @@
 /**
- * Error report generator.
+ * Student upload error report generator.
  *
  * Produces a CSV file listing every failed row with:
  *   - The original row number (so users can find it in their source file)

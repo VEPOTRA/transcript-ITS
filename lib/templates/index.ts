@@ -64,7 +64,7 @@ function commentBlock(lines: string[]): string[] {
 // ─── Student template ─────────────────────────────────────────────────────────
 
 /**
- * Column order mirrors the canonical HEADER_MAP in lib/bulk/parser.ts.
+ * Column order mirrors the canonical HEADER_MAP in lib/bulk/students/parser.ts.
  * Changing this order does NOT break the parser (it maps by name, not position)
  * but keeping it stable prevents confusion for users who re-download the template.
  */
@@ -94,7 +94,7 @@ type StudentSampleRow = {
  *   Row 2 — active Level 200 student, no graduation year
  *   Row 3 — graduated student with graduation year filled
  *
- * All three pass the Zod schema in lib/bulk/validator.ts exactly as written.
+ * All three pass the Zod schema in lib/bulk/students/validator.ts exactly as written.
  * The programmeCode "BSC-CS" is a placeholder — users must replace it with a
  * code that exists in their system (shown on the upload page).
  */
@@ -180,9 +180,11 @@ export function generateStudentTemplate(): string {
 const GRADE_HEADERS = [
   "indexNumber",
   "courseCode",
+  "courseCategory",
   "semester",
   "year",
   "grade",
+  "isResit",
 ] as const;
 
 const VALID_GRADE_LETTERS = Object.keys(DEFAULT_GRADE_SCALE).join(", ");
@@ -190,9 +192,11 @@ const VALID_GRADE_LETTERS = Object.keys(DEFAULT_GRADE_SCALE).join(", ");
 type GradeSampleRow = {
   indexNumber: string;
   courseCode: string;
+  courseCategory: string;
   semester: "FIRST" | "SECOND";
   year: string;
   grade: string;
+  isResit: "true" | "false";
 };
 
 /**
@@ -205,44 +209,56 @@ const GRADE_SAMPLE_ROWS: GradeSampleRow[] = [
   {
     indexNumber: "CS/2024/001",
     courseCode: "MATH101",
+    courseCategory: "OSIS_NEW",
     semester: "FIRST",
     year: "2024",
     grade: "A",
+    isResit: "false",
   },
   {
     indexNumber: "CS/2024/001",
     courseCode: "PHYS101",
+    courseCategory: "OSIS_NEW",
     semester: "FIRST",
     year: "2024",
     grade: "B+",
+    isResit: "true",
   },
   {
     indexNumber: "CS/2024/001",
     courseCode: "COMP101",
+    courseCategory: "OSIS_NEW",
     semester: "SECOND",
     year: "2024",
     grade: "B",
+    isResit: "false",
   },
   {
     indexNumber: "CS/2023/045",
     courseCode: "MATH101",
+    courseCategory: "OSIS_NEW",
     semester: "FIRST",
     year: "2024",
     grade: "C+",
+    isResit: "false",
   },
   {
     indexNumber: "CS/2023/045",
     courseCode: "PHYS101",
+    courseCategory: "OSIS_NEW",
     semester: "FIRST",
     year: "2024",
     grade: "C",
+    isResit: "false",
   },
   {
     indexNumber: "CS/2023/045",
     courseCode: "COMP101",
+    courseCategory: "OSIS_NEW",
     semester: "SECOND",
     year: "2024",
     grade: "F",
+    isResit: "false",
   },
 ];
 
@@ -256,10 +272,14 @@ const GRADE_COMMENTS = commentBlock([
   "  3. Comment rows (starting with #) are stripped automatically on upload.",
   "  4. indexNumber must match an existing student in the system.",
   "  5. courseCode must match an existing active course in the system.",
+  "     If the code is shared by multiple categories, fill courseCategory.",
   "  6. semester must be FIRST or SECOND (case-insensitive; also accepts 1 or 2).",
   "  7. year is the academic year start, e.g. 2024 for the 2024/2025 session.",
   "     The semester (year + FIRST/SECOND) must already exist in the system.",
   `  8. grade must be one of: ${VALID_GRADE_LETTERS}`,
+  "     P is accepted only for non-scoring courses; those courses accept only P or F.",
+  "  9. isResit is optional; use true or false. Blank is treated as false.",
+  "     Resit credits count double toward GPA; quality points use actual course credit.",
   "",
   "COMPUTED AUTOMATICALLY — DO NOT ADD THESE COLUMNS:",
   "  gradePoint, creditHours, computedQualityPoints",
@@ -269,9 +289,11 @@ const GRADE_COMMENTS = commentBlock([
   "COLUMN REFERENCE:",
   "  indexNumber | Required | Must match an existing student's index number",
   "  courseCode  | Required | Must match an existing active course code",
+  "  courseCategory | Optional | Required when a course code is shared across categories",
   "  semester    | Required | FIRST or SECOND",
   "  year        | Required | 4-digit academic year start, e.g. 2024",
   `  grade       | Required | ${VALID_GRADE_LETTERS}`,
+  "  isResit     | Optional | true/false; blank defaults to false",
 ]);
 
 export function generateGradesTemplate(): string {
@@ -279,7 +301,15 @@ export function generateGradesTemplate(): string {
     ...GRADE_COMMENTS,
     csvRow([...GRADE_HEADERS]),
     ...GRADE_SAMPLE_ROWS.map((r) =>
-      csvRow([r.indexNumber, r.courseCode, r.semester, r.year, r.grade]),
+      csvRow([
+        r.indexNumber,
+        r.courseCode,
+        r.courseCategory,
+        r.semester,
+        r.year,
+        r.grade,
+        r.isResit,
+      ]),
     ),
   ];
 
