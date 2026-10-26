@@ -1,7 +1,13 @@
 "use client";
 
 import { useActionState, useState, useEffect } from "react";
-import { createGradeAction, getGradesForStudent, deleteGradeAction } from "@/actions/crud/grades";
+import type { FormEvent } from "react";
+import {
+  createGradeAction,
+  deleteGradeAction,
+  getGradesForStudent,
+  updateGradeAction,
+} from "@/actions/crud/grades";
 import {
   DEFAULT_GRADE_SCALE,
   NON_SCORING_GRADE_LETTERS,
@@ -9,7 +15,7 @@ import {
 import type { Course } from "@/actions/crud/courses";
 import type { Semester } from "@/actions/crud/semesters";
 import {
-  PageHeader, Button, Badge, SearchBar, EmptyState,
+  PageHeader, Button, Badge, SearchBar, EmptyState, Modal,
   Table, Thead, Th, Tbody, Tr, Td,
   Field, Select, useToast, Spinner, ConfirmDialog,
 } from "@/components/ui";
@@ -58,6 +64,12 @@ export function GradesClient({
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [gradeLoadError, setGradeLoadError] = useState<string | null>(null);
   const [showEntry, setShowEntry] = useState(false);
+  const [editCourseId, setEditCourseId] = useState("");
+  const [editGradeValue, setEditGradeValue] = useState("");
+  const [editingGrade, setEditingGrade] = useState<
+    Awaited<ReturnType<typeof getGradesForStudent>>[number] | null
+  >(null);
+  const [savingGrade, setSavingGrade] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [delLoading, setDelLoading] = useState(false);
 
@@ -152,6 +164,40 @@ export function GradesClient({
       toast.error(r.error);
     }
   }
+
+  async function handleEditGrade(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingGrade) return;
+
+    setSavingGrade(true);
+    try {
+      const result = await updateGradeAction(
+        IDLE,
+        new FormData(event.currentTarget),
+      );
+      if (result.status === "success") {
+        toast.success("Grade updated");
+        setEditingGrade(null);
+        if (selectedStudent) await loadStudentGrades(selectedStudent);
+      } else if (result.status === "error") {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update grade.",
+      );
+    } finally {
+      setSavingGrade(false);
+    }
+  }
+
+  const editCourse = courses.find((course) => course.id === editCourseId);
+  const editIsScoring = editCourse?.isScoring ?? editingGrade?.isScoring;
+  const editGradeOptions = editIsScoring === false
+    ? NON_SCORING_GRADE_LETTERS.map(
+        (grade): [string, number] => [grade, DEFAULT_GRADE_SCALE[grade]],
+      )
+    : Object.entries(DEFAULT_GRADE_SCALE).filter(([grade]) => grade !== "P");
 
   return (
     <div className="space-y-6">
@@ -328,10 +374,23 @@ export function GradesClient({
                     <Td className="tabular-nums text-right">{parseFloat(g.gradePoint).toFixed(2)}</Td>
                     <Td className="tabular-nums text-right font-medium">{parseFloat(g.computedQualityPoints).toFixed(2)}</Td>
                     <Td className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => setDeleting(g.id)}
-                        className="text-red-600 hover:bg-red-50 dark:text-red-400">
-                        Delete
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditCourseId(g.courseId);
+                            setEditGradeValue(g.grade);
+                            setEditingGrade(g);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleting(g.id)}
+                          className="text-red-600 hover:bg-red-50 dark:text-red-400">
+                          Delete
+                        </Button>
+                      </div>
                     </Td>
                   </Tr>
                 ))}
@@ -349,9 +408,142 @@ export function GradesClient({
       <ConfirmDialog
         open={!!deleting} onClose={() => setDeleting(null)} onConfirm={handleDelete}
         title="Delete grade"
-        message="Delete this grade record? Use the grade correction flow instead to preserve history."
+        message="Delete this grade record? Use Edit to update it while keeping an audit history."
         confirmLabel="Delete grade" danger loading={delLoading}
       />
+
+      <Modal
+        open={!!editingGrade}
+        onClose={() => {
+          if (!savingGrade) {
+            setEditingGrade(null);
+            setEditCourseId("");
+            setEditGradeValue("");
+          }
+        }}
+        title="Edit grade"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setEditingGrade(null);
+                setEditCourseId("");
+                setEditGradeValue("");
+              }}
+              disabled={savingGrade}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="edit-grade-form"
+              loading={savingGrade}
+            >
+              Save changes
+            </Button>
+          </>
+        }
+      >
+        {editingGrade && (
+          <form
+            id="edit-grade-form"
+            onSubmit={handleEditGrade}
+            className="space-y-4"
+          >
+            <input type="hidden" name="gradeId" value={editingGrade.id} />
+            <input type="hidden" name="isResit" value="false" />
+            <Field label="Course code" required>
+              <Select
+                name="courseId"
+                required
+                value={editCourseId}
+                onChange={(event) => {
+                  const nextCourseId = event.target.value;
+                  const nextCourse = courses.find(
+                    (course) => course.id === nextCourseId,
+                  );
+                  const nextIsScoring =
+                    nextCourse?.isScoring ??
+                    (nextCourseId === editingGrade.courseId
+                      ? editingGrade.isScoring
+                      : true);
+                  const allowedGrades =
+                    nextIsScoring === false
+                      ? NON_SCORING_GRADE_LETTERS
+                      : Object.keys(DEFAULT_GRADE_SCALE).filter(
+                          (grade) => grade !== "P",
+                        );
+
+                  setEditCourseId(nextCourseId);
+                  if (!allowedGrades.some((grade) => grade === editGradeValue)) {
+                    setEditGradeValue("");
+                  }
+                }}
+              >
+                <option value="">Select course…</option>
+                {editingGrade &&
+                  !courses.some((course) => course.id === editingGrade.courseId) && (
+                    <option value={editingGrade.courseId}>
+                      {editingGrade.courseCode} — {editingGrade.courseTitle} (inactive)
+                    </option>
+                  )}
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.code} — {course.title} · {course.category} ({course.creditHours} cr.)
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Semester" required>
+              <Select
+                name="semesterId"
+                defaultValue={editingGrade.semesterId}
+                required
+              >
+                <option value="">Select semester…</option>
+                {[...semesters].reverse().map((semester) => (
+                  <option key={semester.id} value={semester.id}>
+                    {semester.year}/{semester.year + 1} {semester.semester === "FIRST" ? "First" : "Second"}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Grade" required>
+              <Select
+                name="grade"
+                value={editGradeValue}
+                onChange={(event) => setEditGradeValue(event.target.value)}
+                required
+              >
+                <option value="">Select grade…</option>
+                {editGradeOptions.map(([grade, point]) => (
+                  <option key={grade} value={grade}>
+                    {grade} ({point.toFixed(1)})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                name="isResit"
+                value="true"
+                defaultChecked={editingGrade.isResit}
+                className="h-4 w-4 rounded border-slate-300 text-[#174f78] focus:ring-[#174f78]"
+              />
+              Resit attempt
+            </label>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Saving creates a corrected grade record and keeps the previous
+              value in the audit history.
+            </p>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

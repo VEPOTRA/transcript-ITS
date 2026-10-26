@@ -121,28 +121,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ...metadata,
   });
 
-  const campusIds =
-    session.role === "SUPER_ADMIN" ? undefined : session.campusIds;
-  const { validRows, failedRows } = await validateGradeBatch(rows, campusIds);
-  const result: GradeBulkResult = await runGradeBulkInsertPipeline(
-    validRows,
-    failedRows,
-    totalDataRows,
-  );
+  try {
+    const campusIds =
+      session.role === "SUPER_ADMIN" ? undefined : session.campusIds;
+    const { validRows, failedRows } = await validateGradeBatch(
+      rows,
+      campusIds,
+    );
+    const result: GradeBulkResult = await runGradeBulkInsertPipeline(
+      validRows,
+      failedRows,
+      totalDataRows,
+    );
 
-  await logAuditEvent({
-    adminId: session.adminId,
-    action: "BULK_UPLOAD_COMPLETED",
-    entity: "grades",
-    after: {
-      fileName: file.name,
-      totalRows: result.totalRows,
-      successCount: result.successCount,
-      failureCount: result.failureCount,
-      durationMs: result.durationMs,
-    },
-    ...metadata,
-  });
+    await logAuditEvent({
+      adminId: session.adminId,
+      action: "BULK_UPLOAD_COMPLETED",
+      entity: "grades",
+      after: {
+        fileName: file.name,
+        totalRows: result.totalRows,
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+        durationMs: result.durationMs,
+      },
+      ...metadata,
+    });
 
-  return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    console.error("[POST /api/bulk/grades/upload] Import processing failed.", error);
+    return NextResponse.json(
+      { error: "Grade import processing failed. Please retry the upload." },
+      { status: 500 },
+    );
+  }
 }

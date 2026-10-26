@@ -40,7 +40,7 @@ const studentSchema = z.object({
   entryYear: z.coerce.string().min(4).max(15),
   graduationYear: z.preprocess(
     (value) => (value === null || value === "" ? null : value),
-    z.coerce.number().int().min(1990).max(2099).nullable().optional(),
+    z.coerce.string().min(4).max(15).nullable().optional(),
   ),
   email: z.string().email().nullable().optional(),
   phoneNumber: z.string().nullable().optional(),

@@ -68,12 +68,12 @@ export default async function TranscriptDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-0">
       {/* Sticky action bar — hidden on print */}
-      <TranscriptActionBar
+      {/* <TranscriptActionBar
         studentId={studentId}
         studentName={transcript.student.fullName}
         canGenerate={canGenerate}
         latestRecordId={latestRecord?.id ?? null}
-      />
+      /> */}
 
       {/* The document itself */}
       {/* data-transcript-ref is read by the copy-ref button */}

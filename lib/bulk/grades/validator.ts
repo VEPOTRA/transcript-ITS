@@ -3,8 +3,8 @@
  *
  * ─── Pre-fetch strategy (critical for performance)
  *
- * Before any row is validated, four lookup structures are built
- * from four database queries:
+ * Before any row is validated, reference data and matching active grades
+ * are fetched in a small number of queries:
  *
  *   1. studentMap    Map<upperIndexNumber, studentId>
  *   2. courseMap     Map<upperCourseCode, { id, creditHours, isScoring }>
@@ -31,7 +31,7 @@
  */
 
 import { z } from "zod";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { students, courses, semesters, grades } from "@/db/schema";
 import {
@@ -135,21 +135,34 @@ export type GradeValidationContext = {
 };
 
 /**
- * Fetch all lookup data needed for validation.
- * Four queries, all run in parallel. Zero queries during row validation.
+ * Fetch only matching students and grades, plus the reference tables.
+ * Row validation itself performs no DB queries.
  */
 export async function buildValidationContext(
+  rawRows: RawGradeRow[],
   campusIds?: string[],
 ): Promise<GradeValidationContext> {
-  const [studentRows, courseRows, semesterRows, gradeRows] = await Promise.all([
-    db
-      .select({ id: students.id, indexNumber: students.indexNumber })
-      .from(students)
-      .where(
-        campusIds === undefined
-          ? undefined
-          : inArray(students.campusId, campusIds),
-      ),
+  const indexNumbers = [
+    ...new Set(
+      rawRows
+        .map((row) => row.indexNumber?.trim().toUpperCase())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  const [studentRows, courseRows, semesterRows] = await Promise.all([
+    indexNumbers.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({ id: students.id, indexNumber: students.indexNumber })
+          .from(students)
+          .where(
+            and(
+              inArray(sql`upper(${students.indexNumber})`, indexNumbers),
+              campusIds === undefined
+                ? undefined
+                : inArray(students.campusId, campusIds),
+            ),
+          ),
     db
       .select({
         id: courses.id,
@@ -167,14 +180,6 @@ export async function buildValidationContext(
         semester: semesters.semester,
       })
       .from(semesters),
-    db
-      .select({
-        studentId: grades.studentId,
-        courseId: grades.courseId,
-        semesterId: grades.semesterId,
-      })
-      .from(grades)
-      .where(eq(grades.isSuperseded, false)),
   ]);
 
   const studentMap = new Map(
@@ -203,6 +208,53 @@ export async function buildValidationContext(
   const semesterMap = new Map(
     semesterRows.map((r) => [`${r.year}-${r.semester}` as SemesterKey, r.id]),
   );
+  const studentIds = [...new Set(studentMap.values())];
+  const courseCodes = new Set(
+    rawRows
+      .map((row) => row.courseCode?.trim().toUpperCase())
+      .filter((value): value is string => Boolean(value)),
+  );
+  const courseIds = [
+    ...new Set(
+      courseRows
+        .filter((course) => courseCodes.has(course.code.toUpperCase()))
+        .map((course) => course.id),
+    ),
+  ];
+  const semesterKeys = new Set(
+    rawRows.flatMap((row) => {
+      const term = row.semester ? normaliseSemester(row.semester) : null;
+      const year = Number(row.year);
+      return term && Number.isInteger(year) ? [`${year}-${term}`] : [];
+    }),
+  );
+  const semesterIds = [
+    ...new Set(
+      semesterRows
+        .filter((semester) =>
+          semesterKeys.has(`${semester.year}-${semester.semester}`),
+        )
+        .map((semester) => semester.id),
+    ),
+  ];
+  const gradeRows =
+    studentIds.length > 0 && courseIds.length > 0 && semesterIds.length > 0
+      ? await db
+          .select({
+            studentId: grades.studentId,
+            courseId: grades.courseId,
+            semesterId: grades.semesterId,
+          })
+          .from(grades)
+          .where(
+            and(
+              eq(grades.isSuperseded, false),
+              inArray(grades.studentId, studentIds),
+              inArray(grades.courseId, courseIds),
+              inArray(grades.semesterId, semesterIds),
+            ),
+          )
+      : [];
   const existingKeys = new Set(
     gradeRows.map((r) => `${r.studentId}|${r.courseId}|${r.semesterId}`),
   );
@@ -380,7 +432,7 @@ export async function validateGradeBatch(
   validRows: ValidGradeRow[];
   failedRows: GradeRowFailure[];
 }> {
-  const ctx = await buildValidationContext(campusIds);
+  const ctx = await buildValidationContext(rawRows, campusIds);
 
   const validRows: ValidGradeRow[] = [];
   const failedRows: GradeRowFailure[] = [];
