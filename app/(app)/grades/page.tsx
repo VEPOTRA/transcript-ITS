@@ -2,8 +2,7 @@
  * app/(app)/grades/page.tsx
  *
  * Fixed: no longer pre-loads all students (was causing blank page).
- * Students are searched on-demand inside the grade entry form.
- * This page only loads semesters and courses — both are small sets.
+ * Students are searched on demand; this page only loads reference tables.
  */
 import { requireAuth } from "@/lib/auth/rbac";
 import { getSemesters } from "@/actions/crud/semesters";
@@ -21,7 +20,6 @@ export default async function GradesPage() {
 
   return (
     <GradesClient
-      students={[]}
       semesters={semesters}
       courses={courses}
     />

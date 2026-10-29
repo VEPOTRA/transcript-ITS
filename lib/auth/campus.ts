@@ -1,11 +1,11 @@
 /**
  * lib/auth/campus.ts — campus-aware query helpers.
  *
- * Uses campusIds: string[] (array) — empty = SUPER_ADMIN (unrestricted).
+ * SUPER_ADMIN is unrestricted; other roles need an explicit campus assignment.
  * Import these wherever you need to enforce campus isolation.
  */
 
-import { inArray, and, type SQL } from "drizzle-orm";
+import { inArray, sql, type SQL } from "drizzle-orm";
 import { students } from "@/db/schema";
 import type { AuthenticatedAdmin } from "@/types/auth";
 
@@ -17,7 +17,7 @@ export function studentCampusFilter(
   session: AuthenticatedAdmin,
 ): SQL | undefined {
   if (session.role === "SUPER_ADMIN") return undefined;
-  if (!session.campusIds || session.campusIds.length === 0) return undefined;
+  if (!session.campusIds || session.campusIds.length === 0) return sql`false`;
   return inArray(students.campusId, session.campusIds);
 }
 
@@ -29,8 +29,8 @@ export function canAccessStudent(
   studentCampusId: string | null,
 ): boolean {
   if (session.role === "SUPER_ADMIN") return true;
-  if (!session.campusIds || session.campusIds.length === 0) return true;
-  if (!studentCampusId) return false;
+  if (!session.campusIds || session.campusIds.length === 0 || !studentCampusId)
+    return false;
   return session.campusIds.includes(studentCampusId);
 }
 
@@ -57,6 +57,5 @@ export function assertCampusAccess(
  */
 export function sessionCampusIds(session: AuthenticatedAdmin): string[] | null {
   if (session.role === "SUPER_ADMIN") return null;
-  if (!session.campusIds || session.campusIds.length === 0) return null;
   return session.campusIds;
 }

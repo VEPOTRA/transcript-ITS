@@ -1,5 +1,5 @@
 /**
- * Bulk upload row validation.
+ * Student bulk upload row validation.
  *
  * Three layers of validation run in sequence for each row:
  *

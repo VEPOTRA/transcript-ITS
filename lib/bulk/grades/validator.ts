@@ -3,8 +3,8 @@
  *
  * ─── Pre-fetch strategy (critical for performance)
  *
- * Before any row is validated, four lookup structures are built
- * from four database queries:
+ * Before any row is validated, reference data and matching active grades
+ * are fetched in a small number of queries:
  *
  *   1. studentMap    Map<upperIndexNumber, studentId>
  *   2. courseMap     Map<upperCourseCode, { id, creditHours, isScoring }>
@@ -31,13 +31,14 @@
  */
 
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { students, courses, semesters, grades } from "@/db/schema";
 import {
   GRADE_LETTERS,
   resolveGradePoint,
   computeQualityPoints,
+  isGradeAllowedForCourse,
 } from "@/lib/gpa/scale";
 import { normaliseSemester, normaliseGrade } from "./parser";
 import type { RawGradeRow, ValidGradeRow, GradeRowFailure } from "./types";
@@ -59,6 +60,10 @@ const rawRowSchema = z.object({
     .max(50, "Course code must be at most 50 characters")
     .trim()
     .toUpperCase(),
+  courseCategory: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim().toUpperCase() || undefined),
 
   // Raw semester string — entity validation checks the normalised value
   semester: z
@@ -83,12 +88,27 @@ const rawRowSchema = z.object({
     .string({ required_error: "Grade is required" })
     .min(1, "Grade is required")
     .transform(normaliseGrade),
+  isResit: z
+    .string()
+    .optional()
+    .transform((value, context) => {
+      const normalised = value?.trim().toLowerCase();
+      if (!normalised) return false;
+      if (["true", "yes", "1"].includes(normalised)) return true;
+      if (["false", "no", "0"].includes(normalised)) return false;
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Resit must be true or false (yes/no is also accepted).",
+      });
+      return z.NEVER;
+    }),
 });
 
 // ─── Pre-fetch lookup maps ────────────────────────────────────────────────────
 
 type CourseInfo = {
   id: string;
+  category: string;
   creditHours: number;
   isScoring: boolean | null;
 };
@@ -97,8 +117,12 @@ type SemesterKey = `${number}-${"FIRST" | "SECOND"}`;
 export type GradeValidationContext = {
   /** Map<UPPER_INDEX_NUMBER, studentId> */
   studentMap: Map<string, string>;
-  /** Map<UPPER_COURSE_CODE, CourseInfo> */
+  /** Map<UPPER_COURSE_CODE|UPPER_CATEGORY, CourseInfo> */
   courseMap: Map<string, CourseInfo>;
+  /** Map<UPPER_COURSE_CODE, Set<UPPER_CATEGORY>> */
+  courseCategories: Map<string, Set<string>>;
+  /** Course codes shared across categories require a courseCategory CSV value. */
+  ambiguousCourseCodes: Set<string>;
   /** Map<`${year}-${FIRST|SECOND}`, semesterId> */
   semesterMap: Map<string, string>;
   /**
@@ -111,18 +135,39 @@ export type GradeValidationContext = {
 };
 
 /**
- * Fetch all lookup data needed for validation.
- * Four queries, all run in parallel. Zero queries during row validation.
+ * Fetch only matching students and grades, plus the reference tables.
+ * Row validation itself performs no DB queries.
  */
-export async function buildValidationContext(): Promise<GradeValidationContext> {
-  const [studentRows, courseRows, semesterRows, gradeRows] = await Promise.all([
-    db
-      .select({ id: students.id, indexNumber: students.indexNumber })
-      .from(students),
+export async function buildValidationContext(
+  rawRows: RawGradeRow[],
+  campusIds?: string[],
+): Promise<GradeValidationContext> {
+  const indexNumbers = [
+    ...new Set(
+      rawRows
+        .map((row) => row.indexNumber?.trim().toUpperCase())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  const [studentRows, courseRows, semesterRows] = await Promise.all([
+    indexNumbers.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({ id: students.id, indexNumber: students.indexNumber })
+          .from(students)
+          .where(
+            and(
+              inArray(sql`upper(${students.indexNumber})`, indexNumbers),
+              campusIds === undefined
+                ? undefined
+                : inArray(students.campusId, campusIds),
+            ),
+          ),
     db
       .select({
         id: courses.id,
         code: courses.code,
+        category: courses.category,
         creditHours: courses.creditHours,
         isScoring: courses.isScoring,
       })
@@ -135,27 +180,81 @@ export async function buildValidationContext(): Promise<GradeValidationContext> 
         semester: semesters.semester,
       })
       .from(semesters),
-    db
-      .select({
-        studentId: grades.studentId,
-        courseId: grades.courseId,
-        semesterId: grades.semesterId,
-      })
-      .from(grades),
   ]);
 
   const studentMap = new Map(
     studentRows.map((r) => [r.indexNumber.toUpperCase(), r.id]),
   );
-  const courseMap = new Map(
-    courseRows.map((r) => [
-      r.code.toUpperCase(),
-      { id: r.id, creditHours: r.creditHours, isScoring: r.isScoring },
-    ]),
+  const courseMap = new Map<string, CourseInfo>();
+  const courseCategories = new Map<string, Set<string>>();
+  for (const course of courseRows) {
+    const code = course.code.toUpperCase();
+    const category = course.category.toUpperCase();
+    courseMap.set(`${code}|${category}`, {
+      id: course.id,
+      category: course.category,
+      creditHours: course.creditHours,
+      isScoring: course.isScoring,
+    });
+    const categories = courseCategories.get(code) ?? new Set<string>();
+    categories.add(category);
+    courseCategories.set(code, categories);
+  }
+  const ambiguousCourseCodes = new Set(
+    [...courseCategories.entries()]
+      .filter(([, categories]) => categories.size > 1)
+      .map(([code]) => code),
   );
   const semesterMap = new Map(
     semesterRows.map((r) => [`${r.year}-${r.semester}` as SemesterKey, r.id]),
   );
+  const studentIds = [...new Set(studentMap.values())];
+  const courseCodes = new Set(
+    rawRows
+      .map((row) => row.courseCode?.trim().toUpperCase())
+      .filter((value): value is string => Boolean(value)),
+  );
+  const courseIds = [
+    ...new Set(
+      courseRows
+        .filter((course) => courseCodes.has(course.code.toUpperCase()))
+        .map((course) => course.id),
+    ),
+  ];
+  const semesterKeys = new Set(
+    rawRows.flatMap((row) => {
+      const term = row.semester ? normaliseSemester(row.semester) : null;
+      const year = Number(row.year);
+      return term && Number.isInteger(year) ? [`${year}-${term}`] : [];
+    }),
+  );
+  const semesterIds = [
+    ...new Set(
+      semesterRows
+        .filter((semester) =>
+          semesterKeys.has(`${semester.year}-${semester.semester}`),
+        )
+        .map((semester) => semester.id),
+    ),
+  ];
+  const gradeRows =
+    studentIds.length > 0 && courseIds.length > 0 && semesterIds.length > 0
+      ? await db
+          .select({
+            studentId: grades.studentId,
+            courseId: grades.courseId,
+            semesterId: grades.semesterId,
+          })
+          .from(grades)
+          .where(
+            and(
+              eq(grades.isSuperseded, false),
+              inArray(grades.studentId, studentIds),
+              inArray(grades.courseId, courseIds),
+              inArray(grades.semesterId, semesterIds),
+            ),
+          )
+      : [];
   const existingKeys = new Set(
     gradeRows.map((r) => `${r.studentId}|${r.courseId}|${r.semesterId}`),
   );
@@ -163,6 +262,8 @@ export async function buildValidationContext(): Promise<GradeValidationContext> 
   return {
     studentMap,
     courseMap,
+    courseCategories,
+    ambiguousCourseCodes,
     semesterMap,
     existingKeys,
     seenInBatch: new Set(),
@@ -185,16 +286,25 @@ export function validateGradeRow(
   const parsed = rawRowSchema.safeParse({
     indexNumber: raw.indexNumber,
     courseCode: raw.courseCode,
+    courseCategory: raw.courseCategory,
     semester: raw.semester,
     year: raw.year,
     grade: raw.grade,
+    isResit: raw.isResit,
   });
 
   if (!parsed.success) {
     return { ok: false, errors: parsed.error.issues.map((i) => i.message) };
   }
 
-  const { indexNumber, courseCode, year, grade } = parsed.data;
+  const {
+    indexNumber,
+    courseCode,
+    courseCategory,
+    year,
+    grade,
+    isResit,
+  } = parsed.data;
 
   // Normalise semester from raw string → "FIRST" | "SECOND"
   const semesterTerm = normaliseSemester(parsed.data.semester);
@@ -223,9 +333,29 @@ export function validateGradeRow(
   }
 
   // Step 2b: course lookup
-  const courseInfo = ctx.courseMap.get(courseCode.toUpperCase());
-  if (!courseInfo) {
+  const normalisedCourseCode = courseCode.toUpperCase();
+  const ambiguousCourse = ctx.ambiguousCourseCodes.has(normalisedCourseCode);
+  if (ambiguousCourse && !courseCategory) {
+    errors.push(
+      `Course code "${courseCode}" exists in multiple categories; add courseCategory to identify the intended course.`,
+    );
+  }
+  const categories = ctx.courseCategories.get(normalisedCourseCode);
+  const resolvedCategory =
+    courseCategory ??
+    (categories?.size === 1 ? categories.values().next().value : undefined);
+  const courseInfo = resolvedCategory
+    ? ctx.courseMap.get(`${normalisedCourseCode}|${resolvedCategory}`)
+    : undefined;
+  if ((!ambiguousCourse || courseCategory) && !courseInfo) {
     errors.push(`Course "${courseCode}" not found or is inactive.`);
+  }
+  if (courseInfo && !isGradeAllowedForCourse(grade, courseInfo.isScoring)) {
+    errors.push(
+      courseInfo.isScoring === false
+        ? "Non-scoring courses accept only P or F."
+        : "P is only valid for non-scoring courses.",
+    );
   }
 
   // Step 2c: semester lookup
@@ -281,9 +411,11 @@ export function validateGradeRow(
       semesterId: resolvedSemesterId,
       indexNumber,
       courseCode,
+      courseCategory: resolvedCourseInfo.category,
       semester: term,
       year,
       grade,
+      isResit,
       gradePoint: gradePoint.toFixed(2),
       creditHours,
       computedQualityPoints: qualityPts.toFixed(2),
@@ -293,11 +425,14 @@ export function validateGradeRow(
 
 // ─── Batch validation ─────────────────────────────────────────────────────────
 
-export async function validateGradeBatch(rawRows: RawGradeRow[]): Promise<{
+export async function validateGradeBatch(
+  rawRows: RawGradeRow[],
+  campusIds?: string[],
+): Promise<{
   validRows: ValidGradeRow[];
   failedRows: GradeRowFailure[];
 }> {
-  const ctx = await buildValidationContext();
+  const ctx = await buildValidationContext(rawRows, campusIds);
 
   const validRows: ValidGradeRow[] = [];
   const failedRows: GradeRowFailure[] = [];
@@ -314,9 +449,11 @@ export async function validateGradeBatch(rawRows: RawGradeRow[]): Promise<{
         rawValues: {
           indexNumber: raw.indexNumber,
           courseCode: raw.courseCode,
+          courseCategory: raw.courseCategory,
           semester: raw.semester,
           year: raw.year,
           grade: raw.grade,
+          isResit: raw.isResit,
         },
         errors: result.errors,
       });

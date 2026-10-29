@@ -61,11 +61,13 @@ export default async function TemplatesPage() {
         columnRows={[
           { name: "indexNumber", required: true, note: "Must match an existing student index number" },
           { name: "courseCode", required: true, note: "Must match an existing active course code" },
+          { name: "courseCategory", required: false, note: "Required when the course code exists in multiple categories" },
           { name: "semester", required: true, note: "FIRST or SECOND (also accepts 1, 2, first, second)" },
           { name: "year", required: true, note: "4-digit academic year start, e.g. 2024 for 2024/2025" },
-          { name: "grade", required: true, note: `One of: ${Object.keys(DEFAULT_GRADE_SCALE).join(", ")}` },
+          { name: "grade", required: true, note: `One of: ${Object.keys(DEFAULT_GRADE_SCALE).join(", ")}. P/F only for non-scoring courses.` },
+          { name: "isResit", required: false, note: "true/false; blank defaults to false. Resit credits count twice toward GPA." },
         ]}
-        warningNote="Do not add gradePoint, creditHours, or computedQualityPoints columns. These are computed server-side from the grade letter and course record. Any such columns will be ignored."
+        warningNote="Do not add gradePoint, creditHours, or computedQualityPoints columns. These are computed server-side from the grade letter and course record. Resit quality points use actual course credit."
       />
     </div>
   );

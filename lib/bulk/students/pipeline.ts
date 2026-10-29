@@ -1,4 +1,4 @@
-// pipeline.ts – updated version
+// Student bulk insert pipeline.
 
 import { db } from "@/db";
 import { students } from "@/db/schema";

@@ -20,13 +20,26 @@ export const DEFAULT_GRADE_SCALE: Readonly<Record<string, number>> = {
   "D+": 1.5,
   D: 1.0,
   E: 0.0,
+  F: 0.0,
   IC: 0.0,
+  P: 0.0,
 };
 
 /** Ordered list of valid grade letters (descending quality). */
 export const GRADE_LETTERS = Object.keys(DEFAULT_GRADE_SCALE) as Array<
   keyof typeof DEFAULT_GRADE_SCALE
 >;
+
+export const NON_SCORING_GRADE_LETTERS = ["P", "F"] as const;
+
+export function isGradeAllowedForCourse(
+  grade: string,
+  isScoring: boolean | null,
+): boolean {
+  return isScoring === false
+    ? NON_SCORING_GRADE_LETTERS.some((letter) => letter === grade)
+    : grade !== "P";
+}
 
 /**
  * Resolve the grade point for a letter grade.

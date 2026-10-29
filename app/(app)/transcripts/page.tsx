@@ -12,10 +12,9 @@ import { students, transcripts, programmes } from "@/db/schema";
 import { and, eq, ilike, or, desc, inArray } from "drizzle-orm";
 import { assembleTranscript } from "@/lib/transcript";
 import { TranscriptPreview } from "@/components/transcript/preview";
-import { TranscriptActionBar } from "@/components/transcript/action-bar";
 import { PrintButton, TranscriptHistoryRow } from "@/components/transcript/search-controls";
 
-export const metadata: Metadata = { title: "Transcripts — TMS" };
+export const metadata: Metadata = { title: "Transcripts — UEW-TMS" };
 
 type PageProps = { searchParams: Promise<{ q?: string }> };
 
@@ -33,7 +32,10 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
   };
 
   let matched: StudentRow[] = [];
-  if (query) {
+  if (
+    query &&
+    (session.role === "SUPER_ADMIN" || session.campusIds.length > 0)
+  ) {
     // Build campus-aware search filter
     const searchCondition = or(
       ilike(students.indexNumber, `%${query}%`),
@@ -43,7 +45,7 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
 
     // SUPER_ADMIN searches all campuses; others only their campus
     const campusCampusIds = session.campusIds ?? [];
-    const campusCondition = session.role !== "SUPER_ADMIN" && campusCampusIds.length > 0
+    const campusCondition = session.role !== "SUPER_ADMIN"
       ? inArray(students.campusId, campusCampusIds)
       : undefined;
 
@@ -83,21 +85,43 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
   }
 
   // ── Recent history (no onClick — each row is a plain link) ───────────────
-  const recent = !query ? await db
-    .select({
-      id: transcripts.id,
-      transcriptNumber: transcripts.transcriptNumber,
-      createdAt: transcripts.createdAt,
-      idx: students.indexNumber,
-      first: students.firstName,
-      last: students.lastName,
-      prog: programmes.name,
-    })
-    .from(transcripts)
-    .innerJoin(students, eq(transcripts.studentId, students.id))
-    .innerJoin(programmes, eq(students.programmeId, programmes.id))
-    .orderBy(desc(transcripts.createdAt))
-    .limit(20) : [];
+  let recent: {
+    id: string;
+    transcriptNumber: string;
+    createdAt: Date;
+    idx: string;
+    first: string;
+    last: string;
+    prog: string | null;
+  }[] = [];
+  let recentLoadError = false;
+  if (!query && (session.role === "SUPER_ADMIN" || session.campusIds.length > 0)) {
+    const recentQuery = db
+      .select({
+        id: transcripts.id,
+        transcriptNumber: transcripts.transcriptNumber,
+        createdAt: transcripts.createdAt,
+        idx: students.indexNumber,
+        first: students.firstName,
+        last: students.lastName,
+        prog: programmes.name,
+      })
+      .from(transcripts)
+      .innerJoin(students, eq(transcripts.studentId, students.id))
+      .innerJoin(programmes, eq(students.programmeId, programmes.id));
+
+    try {
+      recent = session.role === "SUPER_ADMIN"
+        ? await recentQuery.orderBy(desc(transcripts.createdAt)).limit(20)
+        : await recentQuery
+            .where(inArray(students.campusId, session.campusIds))
+            .orderBy(desc(transcripts.createdAt))
+            .limit(20);
+    } catch (error) {
+      console.error("[TranscriptsPage] Failed to load recent transcripts:", error);
+      recentLoadError = true;
+    }
+  }
 
   // ── Render inline transcript ──────────────────────────────────────────────
   if (inlineResult?.ok) {
@@ -115,14 +139,7 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
           {/* Print button lives in a client island */}
           <PrintButton />
         </div>
-
-        <TranscriptActionBar
-          studentId={matched[0].id}
-          studentName={transcript.student.fullName}
-          canGenerate={canGen}
-          latestRecordId={latestRecord?.id ?? null}
-        />
-
+        {/* Transcript preview — no interactivity, just static JSX */}
         <div data-transcript-ref={display.transcriptNumber}>
           <TranscriptPreview transcript={display} latestRecordId={latestRecord?.id ?? null} />
         </div>
@@ -153,6 +170,15 @@ export default async function TranscriptsPage({ searchParams }: PageProps) {
       </div>
 
       <SearchForm query={query} autoFocus />
+
+      {recentLoadError && (
+        <p
+          role="alert"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+        >
+          Recent transcript history is temporarily unavailable.
+        </p>
+      )}
 
       {/* Multiple matches — plain anchor links, no onClick */}
       {query && matched.length > 1 && (

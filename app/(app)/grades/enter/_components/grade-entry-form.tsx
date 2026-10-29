@@ -17,6 +17,7 @@ import { createGradeAction } from "@/actions/crud/grades";
 import { useToast } from "@/components/ui";
 import type { ActionState } from "@/types/auth";
 import type { Semester } from "@/actions/crud/semesters";
+import { NON_SCORING_GRADE_LETTERS } from "@/lib/gpa/scale";
 
 const GRADE_LABELS: Record<string, string> = {
   "A": "A  — 4.00  (Excellent)",
@@ -26,7 +27,7 @@ const GRADE_LABELS: Record<string, string> = {
   "C": "C  — 2.00  (Average)",
   "D+": "D+ — 1.50  (Below Average)",
   "D": "D  — 1.00  (Marginal Pass)",
-  "E": "E  — 0.50  (Borderline Fail)",
+  "E": "E  — 0.00  (Fail)",
   "F": "F  — 0.00  (Fail)",
   "IC": "IC — 0.00  (Incomplete)",
 };
@@ -84,8 +85,10 @@ export function GradeEntryForm({ semesters, courses }: Props) {
 
   const isScoring = selectedCourse ? selectedCourse.isScoring !== false : true;
   const gradeOptions = isScoring
-    ? Object.entries(GRADE_LABELS)
-    : [["P", "P — Pass (non-scoring)"], ["F", "F — Fail (non-scoring)"]];
+    ? Object.entries(GRADE_LABELS).filter(([grade]) => grade !== "P")
+    : NON_SCORING_GRADE_LETTERS.map(
+        (grade): [string, string] => [grade, GRADE_LABELS[grade]],
+      );
 
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [searching, setSearching] = useState(false);

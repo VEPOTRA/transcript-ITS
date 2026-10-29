@@ -18,10 +18,8 @@
  * ║  Client: studentId, courseId, semesterId, grade, isResit.       ║
  * ╚══════════════════════════════════════════════════════════════════╝
  *
- * Grade corrections use a supersede pattern — the old row is marked
- * is_superseded=true (requires the schema addition from the audit review)
- * and a new row is inserted. Hard deletes are not permitted on grades
- * that have been superseded, preserving a complete audit trail.
+ * Grade updates modify the selected row in place and capture before/after
+ * values in the audit log. Hard deletes are not permitted on superseded grades.
  */
 
 import { z } from "zod";
@@ -29,13 +27,14 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { grades, courses, students } from "@/db/schema";
+import { grades, courses, students, semesters } from "@/db/schema";
 import { assertPermission } from "@/lib/auth/rbac";
 import { logAuditEvent, extractRequestMeta } from "@/lib/audit";
 import {
   GRADE_LETTERS,
   resolveGradePoint,
   computeQualityPoints,
+  isGradeAllowedForCourse,
 } from "@/lib/gpa/scale";
 import { parseDbError, withAction } from "@/lib/actions/utils";
 import type { ActionState } from "@/types/auth";
@@ -66,6 +65,7 @@ const gradeInputSchema = z.object({
 
 type ServerComputedValues = {
   creditHours: number;
+  isScoring: boolean | null;
   gradePoint: string; // toFixed(2) string for numeric column
   computedQualityPoints: string; // toFixed(2) string for numeric column
 };
@@ -84,12 +84,16 @@ async function resolveServerValues(
 ): Promise<ServerComputedValues | null> {
   // Fetch credit hours from the authoritative source — the courses table
   const courseRows = await db
-    .select({ creditHours: courses.creditHours })
+    .select({
+      creditHours: courses.creditHours,
+      isActive: courses.isActive,
+      isScoring: courses.isScoring,
+    })
     .from(courses)
     .where(eq(courses.id, courseId))
     .limit(1);
 
-  if (courseRows.length === 0) return null;
+  if (courseRows.length === 0 || !courseRows[0].isActive) return null;
 
   const creditHours = courseRows[0].creditHours; // integer, from DB
   const gradePoint = resolveGradePoint(grade); // from scale, server-only
@@ -97,9 +101,26 @@ async function resolveServerValues(
 
   return {
     creditHours,
+    isScoring: courseRows[0].isScoring,
     gradePoint: gradePoint.toFixed(2),
     computedQualityPoints: qualityPts.toFixed(2),
   };
+}
+
+async function isStudentInScope(
+  studentId: string,
+  session: Awaited<ReturnType<typeof assertPermission>>,
+): Promise<boolean> {
+  if (session.role === "SUPER_ADMIN") return true;
+  if (session.campusIds.length === 0) return false;
+
+  const [student] = await db
+    .select({ campusId: students.campusId })
+    .from(students)
+    .where(eq(students.id, studentId))
+    .limit(1);
+
+  return Boolean(student?.campusId && session.campusIds.includes(student.campusId));
 }
 
 // ─── CREATE ───────────────────────────────────────────────────────────────────
@@ -132,7 +153,7 @@ export async function createGradeAction(
 
     // Step 2: verify student exists
     const student = await db
-      .select({ id: students.id })
+      .select({ id: students.id, campusId: students.campusId })
       .from(students)
       .where(eq(students.id, studentId))
       .limit(1);
@@ -141,6 +162,15 @@ export async function createGradeAction(
         status: "error",
         error: "Student not found.",
         fieldErrors: { studentId: ["Student does not exist"] },
+      };
+    }
+    if (
+      session.role !== "SUPER_ADMIN" &&
+      (!student[0].campusId || !session.campusIds.includes(student[0].campusId))
+    ) {
+      return {
+        status: "error",
+        error: "You do not have access to enter grades for this student.",
       };
     }
 
@@ -152,6 +182,15 @@ export async function createGradeAction(
         status: "error",
         error: "Course not found.",
         fieldErrors: { courseId: ["Course does not exist"] },
+      };
+    }
+    if (!isGradeAllowedForCourse(grade, computed.isScoring)) {
+      return {
+        status: "error",
+        error:
+          computed.isScoring === false
+            ? "Non-scoring courses accept only P or F."
+            : "P is only valid for non-scoring courses.",
       };
     }
 
@@ -206,7 +245,7 @@ export async function createGradeAction(
         studentId,
         courseId,
         semesterId,
-        grade,
+        grade: grade as (typeof grades.$inferInsert)["grade"],
         gradePoint: computed.gradePoint,
         creditHours: computed.creditHours,
         computedQualityPoints: computed.computedQualityPoints,
@@ -221,52 +260,53 @@ export async function createGradeAction(
   }, "[createGradeAction]");
 }
 
-// ─── CORRECT (supersede) ──────────────────────────────────────────────────────
+// ─── UPDATE ───────────────────────────────────────────────────────────────────
 
 /**
- * Correct a grade by superseding the existing record.
- *
- * The old row is marked is_superseded=true (requires schema addition).
- * A new row with the corrected grade is inserted.
- * Both rows remain in the table for full audit history.
- *
- * This replaces a direct UPDATE, which would silently overwrite history.
- *
- * If the schema does not yet have is_superseded, this falls back to
- * a direct UPDATE and logs the before/after state on the audit row.
+ * Update an active grade record in place, keeping an audit snapshot of changes.
  */
-export async function correctGradeAction(
+export async function updateGradeAction(
   _prev: ActionState,
   formData: FormData,
-): Promise<ActionState<{ newGradeId: string }>> {
+): Promise<ActionState<{ id: string }>> {
   return withAction(async () => {
     const session = await assertPermission("enter_grades");
 
-    // gradeId identifies the existing row to supersede
     const gradeIdResult = z
       .string()
       .uuid("Invalid grade ID")
       .safeParse(formData.get("gradeId"));
-    if (!gradeIdResult.success) {
-      return { status: "error", error: "Invalid grade ID." };
-    }
-
-    const newGradeResult = z
+    const courseIdResult = z
+      .string()
+      .uuid("Select a valid course")
+      .safeParse(formData.get("courseId"));
+    const semesterIdResult = z
+      .string()
+      .uuid("Select a valid semester")
+      .safeParse(formData.get("semesterId"));
+    const gradeResult = z
       .enum(GRADE_LETTERS as [string, ...string[]], {
         message: "Select a valid grade",
       })
       .safeParse(formData.get("grade"));
-    if (!newGradeResult.success) {
+    if (
+      !gradeIdResult.success ||
+      !courseIdResult.success ||
+      !semesterIdResult.success ||
+      !gradeResult.success
+    ) {
       return {
         status: "error",
-        error: newGradeResult.error.errors[0]?.message ?? "Invalid grade.",
+        error: "Select a valid course, semester, and grade.",
       };
     }
 
     const gradeId = gradeIdResult.data;
-    const newGrade = newGradeResult.data;
+    const courseId = courseIdResult.data;
+    const semesterId = semesterIdResult.data;
+    const grade = gradeResult.data;
+    const isResit = formData.getAll("isResit").includes("true");
 
-    // Fetch the existing grade row
     const existing = await db
       .select()
       .from(grades)
@@ -276,85 +316,131 @@ export async function correctGradeAction(
     if (existing.length === 0)
       return { status: "error", error: "Grade record not found." };
     const old = existing[0];
-
-    if (old.grade === newGrade) {
+    if (!(await isStudentInScope(old.studentId, session))) {
       return {
         status: "error",
-        error:
-          "The new grade is the same as the existing grade — no change made.",
+        error: "You do not have access to update this student's grade.",
+      };
+    }
+    if (old.isSuperseded) {
+      return {
+        status: "error",
+        error: "This grade has already been corrected. Update the current grade instead.",
       };
     }
 
-    // Recompute server-side with the new grade letter
-    // creditHours comes from the existing grade row's snapshot (consistent with original entry)
-    const gradePoint = resolveGradePoint(newGrade);
-    const qualityPts = computeQualityPoints(gradePoint, old.creditHours);
+    if (
+      old.grade === grade &&
+      old.isResit === isResit &&
+      old.courseId === courseId &&
+      old.semesterId === semesterId
+    ) {
+      return {
+        status: "error",
+        error: "No changes were made to this grade.",
+      };
+    }
 
-    // Atomic: mark old row superseded + insert new row in a transaction
-    let newRecord: typeof grades.$inferSelect;
+    const [semester] = await db
+      .select({ id: semesters.id })
+      .from(semesters)
+      .where(eq(semesters.id, semesterId))
+      .limit(1);
+    if (!semester) {
+      return {
+        status: "error",
+        error: "Semester not found.",
+      };
+    }
+
+    const [course] = await db
+      .select({
+        creditHours: courses.creditHours,
+        isActive: courses.isActive,
+        isScoring: courses.isScoring,
+      })
+      .from(courses)
+      .where(eq(courses.id, courseId))
+      .limit(1);
+    if (!course || (!course.isActive && courseId !== old.courseId)) {
+      return { status: "error", error: "Course not found or inactive." };
+    }
+    if (!isGradeAllowedForCourse(grade, course.isScoring)) {
+      return {
+        status: "error",
+        error:
+          course.isScoring === false
+            ? "Non-scoring courses accept only P or F."
+            : "P is only valid for non-scoring courses.",
+      };
+    }
+
+    const gradePoint = resolveGradePoint(grade);
+    const computed = {
+      creditHours: course.creditHours,
+      gradePoint: gradePoint.toFixed(2),
+      computedQualityPoints: computeQualityPoints(
+        gradePoint,
+        course.creditHours,
+      ).toFixed(2),
+    };
+
+    let updated: typeof grades.$inferSelect | null = null;
     try {
-      await db.transaction(async (tx) => {
-        // Mark the old row superseded
-        // If is_superseded column exists (recommended schema addition):
-        //   await tx.update(grades).set({ isSuperseded: true }).where(eq(grades.id, gradeId));
-        // Fallback: we rely on the audit log for history if column is absent.
-
-        // Insert the corrected grade
-        [newRecord] = await tx
-          .insert(grades)
-          .values({
-            studentId: old.studentId,
-            courseId: old.courseId,
-            semesterId: old.semesterId,
-            grade: newGrade as (typeof grades.$inferInsert)["grade"],
-            gradePoint: gradePoint.toFixed(2),
-            creditHours: old.creditHours, // snapshot preserved
-            computedQualityPoints: qualityPts.toFixed(2),
-            isResit: old.isResit,
-          })
-          .returning();
-      });
+      [updated] = await db
+        .update(grades)
+        .set({
+          courseId,
+          semesterId,
+          grade: grade as (typeof grades.$inferInsert)["grade"],
+          gradePoint: computed.gradePoint,
+          creditHours: computed.creditHours,
+          computedQualityPoints: computed.computedQualityPoints,
+          isResit,
+        })
+        .where(
+          and(
+            eq(grades.id, gradeId),
+            eq(grades.isSuperseded, false),
+          )
+        )
+        .returning();
+      if (!updated) {
+        return {
+          status: "error",
+          error: "This grade is no longer active. Refresh and try again.",
+        };
+      }
     } catch (err) {
       const e = parseDbError(err);
       if (e.type === "unique") {
         return {
           status: "error",
-          error:
-            "A grade correction created a duplicate. This semester may already have a corrected grade for this course.",
+          error: "This student already has a grade for that course and semester.",
         };
       }
-      console.error("[correctGradeAction]", err);
+      console.error("[updateGradeAction]", err);
       return {
         status: "error",
-        error: "Failed to correct grade. Please try again.",
+        error: "Failed to update grade. Please try again.",
       };
     }
 
     const meta = extractRequestMeta(await headers());
     await logAuditEvent({
       adminId: session.adminId,
-      action: "SUPERSEDE_GRADE",
+      action: "UPDATE_GRADE",
       entity: "grades",
       entityId: gradeId,
-      before: {
-        grade: old.grade,
-        gradePoint: old.gradePoint,
-        computedQualityPoints: old.computedQualityPoints,
-      },
-      after: {
-        grade: newGrade,
-        gradePoint: gradePoint.toFixed(2),
-        computedQualityPoints: qualityPts.toFixed(2),
-        isResit: old.isResit,
-        newGradeId: newRecord!.id,
-      },
+      before: old as Record<string, unknown>,
+      after: updated as Record<string, unknown>,
       ...meta,
     });
 
     revalidatePath(`/students/${old.studentId}`);
     revalidatePath(`/transcripts/${old.studentId}`);
-    return { status: "success", data: { newGradeId: newRecord!.id } };
-  }, "[correctGradeAction]");
+    return { status: "success", data: { id: updated.id } };
+  }, "[updateGradeAction]");
 }
 
 // ─── DELETE ───────────────────────────────────────────────────────────────────
@@ -364,7 +450,7 @@ export async function correctGradeAction(
  *
  * Only permitted on grades that have NOT been superseded and have
  * no downstream audit trail indicating they were used in a transcript.
- * In most cases, use correctGradeAction instead.
+ * In most cases, update the grade instead to preserve the record.
  */
 export async function deleteGradeAction(id: string): Promise<ActionState> {
   return withAction(async () => {
@@ -379,6 +465,18 @@ export async function deleteGradeAction(id: string): Promise<ActionState> {
       return { status: "error", error: "Grade record not found." };
 
     const old = existing[0];
+    if (!(await isStudentInScope(old.studentId, session))) {
+      return {
+        status: "error",
+        error: "You do not have access to delete this student's grade.",
+      };
+    }
+    if (old.isSuperseded) {
+      return {
+        status: "error",
+        error: "This grade is part of the correction history and cannot be deleted.",
+      };
+    }
 
     try {
       await db.delete(grades).where(eq(grades.id, id));
@@ -416,25 +514,35 @@ export async function deleteGradeAction(id: string): Promise<ActionState> {
 // ─── READ HELPERS ─────────────────────────────────────────────────────────────
 
 export async function getGradesForStudent(studentId: string) {
+  const session = await assertPermission("view_grades");
+  if (!(await isStudentInScope(studentId, session))) return [];
+
   return db
     .select({
       id: grades.id,
+      courseId: grades.courseId,
+      semesterId: grades.semesterId,
       grade: grades.grade,
       gradePoint: grades.gradePoint,
       creditHours: grades.creditHours,
       computedQualityPoints: grades.computedQualityPoints,
+      isResit: grades.isResit,
       createdAt: grades.createdAt,
       courseCode: courses.code,
       courseTitle: courses.title,
       isScoring: courses.isScoring,
+      semesterYear: semesters.year,
+      semesterTerm: semesters.semester,
     })
     .from(grades)
     .innerJoin(courses, eq(grades.courseId, courses.id))
-    .where(eq(grades.studentId, studentId))
-    .orderBy(grades.createdAt);
+    .innerJoin(semesters, eq(grades.semesterId, semesters.id))
+    .where(and(eq(grades.studentId, studentId), eq(grades.isSuperseded, false)))
+    .orderBy(semesters.year, semesters.semester, courses.code);
 }
 
 export async function getGradeById(id: string) {
+  const session = await assertPermission("view_grades");
   const rows = await db
     .select({
       id: grades.id,
@@ -453,7 +561,9 @@ export async function getGradeById(id: string) {
     .innerJoin(courses, eq(grades.courseId, courses.id))
     .where(eq(grades.id, id))
     .limit(1);
-  return rows[0] ?? null;
+  const grade = rows[0];
+  if (!grade || !(await isStudentInScope(grade.studentId, session))) return null;
+  return grade;
 }
 
 /**
@@ -465,6 +575,9 @@ export async function gradeExists(
   courseId: string,
   semesterId: string,
 ): Promise<boolean> {
+  const session = await assertPermission("enter_grades");
+  if (!(await isStudentInScope(studentId, session))) return false;
+
   const rows = await db
     .select({ id: grades.id })
     .from(grades)
@@ -473,6 +586,7 @@ export async function gradeExists(
         eq(grades.studentId, studentId),
         eq(grades.courseId, courseId),
         eq(grades.semesterId, semesterId),
+        eq(grades.isSuperseded, false),
       ),
     )
     .limit(1);

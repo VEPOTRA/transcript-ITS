@@ -1,5 +1,5 @@
 /**
- * Bulk upload type definitions.
+ * Student bulk upload type definitions.
  *
  * These types flow through every layer of the pipeline:
  *   raw CSV text → RawRow → ValidatedRow → RowResult → BulkUploadResult

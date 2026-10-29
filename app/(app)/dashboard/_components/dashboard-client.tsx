@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { AuthenticatedAdmin } from "@/types/auth";
 import { can } from "@/lib/auth/permissions";
 
@@ -8,80 +9,77 @@ type Stats = {
   programmes: number; semesters: number; grades: number; transcripts: number;
 };
 
-type Props = { session: AuthenticatedAdmin; stats: Stats };
+type Props = {
+  session: AuthenticatedAdmin;
+  stats: Stats;
+  dateLabel: string;
+};
 
-export function DashboardClient({ session, stats }: Props) {
+export function DashboardClient({ session, stats, dateLabel }: Props) {
   const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-  const name = session.email.split("@")[0].split(/[._-]/)[0];
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="space-y-8">
 
-      {/* Welcome banner */}
-      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 text-white shadow-sm shadow-indigo-100 dark:shadow-none">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-indigo-200 text-sm font-medium">{greeting},</p>
-            <h1 className="mt-0.5 text-2xl font-bold capitalize">{name}</h1>
-            <p className="mt-2 text-indigo-200 text-sm">
-              {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-            </p>
-          </div>
-          <div className="hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-            <svg className="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
-            </svg>
-          </div>
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-6 dark:border-slate-800">
+        <div>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {dateLabel}
+          </p>
         </div>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {session.role.replace("_", " ")}
+        </span>
       </div>
 
       {/* Stat cards — ADMIN+ only */}
       {isAdmin && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Total students" value={stats.students} sub={`${stats.activeStudents} active`} href="/students" color="indigo" icon={<StudentsIcon />} />
-          <StatCard label="Programmes" value={stats.programmes} href="/programmes" color="violet" icon={<ProgrammeIcon />} />
-          <StatCard label="Courses" value={stats.courses} href="/courses" color="sky" icon={<CourseIcon />} />
-          <StatCard label="Grade records" value={stats.grades} sub={`${stats.transcripts} transcripts`} href="/grades" color="teal" icon={<GradeIcon />} />
+          <StatCard label="Students" value={stats.students} sub={`${stats.activeStudents} active`} href="/students" icon={<StudentsIcon />} />
+          <StatCard label="Programmes" value={stats.programmes} href="/programmes" icon={<ProgrammeIcon />} />
+          <StatCard label="Courses" value={stats.courses} href="/courses" icon={<CourseIcon />} />
+          <StatCard label="Grade records" value={stats.grades} sub={`${stats.transcripts} transcripts issued`} href="/grades" icon={<GradeIcon />} />
         </div>
       )}
 
       {/* Quick actions */}
       <section>
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">Quick actions</h2>
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Common tasks</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <QuickCard href="/students"
             title={can(session, "manage_students") ? "Manage students" : "Search students"}
             description={can(session, "manage_students") ? "Add, search, and update student records." : "Search and view student records."}
-            icon={<StudentsIcon />} color="indigo" />
+            icon={<StudentsIcon />} />
           <QuickCard href="/transcripts" title="Transcripts"
             description="View and print official academic transcripts."
-            icon={<TranscriptIcon />} color="violet" />
+            icon={<TranscriptIcon />} />
           {can(session, "enter_grades") && (
             <QuickCard href="/grades" title="Enter grades"
               description="Search a student and submit semester results."
-              icon={<GradeIcon />} color="teal" />
+              icon={<GradeIcon />} />
           )}
           {can(session, "bulk_upload") && (
             <QuickCard href="/bulk/upload" title="Bulk student import"
               description="Upload a CSV to register multiple students."
-              icon={<UploadIcon />} color="amber" />
+              icon={<UploadIcon />} />
           )}
           {can(session, "bulk_upload") && (
             <QuickCard href="/bulk/grades" title="Bulk grade import"
               description="Upload semester results for multiple students."
-              icon={<ClipboardIcon />} color="sky" />
+              icon={<ClipboardIcon />} />
           )}
           {can(session, "manage_courses") && (
             <QuickCard href="/semesters" title="Semesters"
               description="Create and manage academic periods."
-              icon={<CalIcon />} color="rose" />
+              icon={<CalIcon />} />
           )}
           {can(session, "view_audit_logs") && (
             <QuickCard href="/audit" title="Audit log"
               description="Immutable record of all system activity."
-              icon={<AuditIcon />} color="gray" />
+              icon={<AuditIcon />} />
           )}
         </div>
       </section>
@@ -90,7 +88,7 @@ export function DashboardClient({ session, stats }: Props) {
       {isAdmin && (
         <section>
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">System overview</h2>
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             {[
               { label: "Semesters configured", value: stats.semesters, warn: stats.semesters === 0, warnMsg: "Grade entry blocked" },
               { label: "Active programmes", value: stats.programmes },
@@ -99,13 +97,13 @@ export function DashboardClient({ session, stats }: Props) {
               { label: "Active students", value: stats.activeStudents },
               { label: "Transcripts issued", value: stats.transcripts },
             ].map(({ label, value, warn, warnMsg }, i, arr) => (
-              <div key={label} className={`flex items-center justify-between px-6 py-3.5 ${i < arr.length - 1 ? "border-b border-gray-100 dark:border-gray-800" : ""}`}>
-                <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+              <div key={label} className={`flex items-center justify-between px-5 py-3.5 ${i < arr.length - 1 ? "border-b border-slate-100 dark:border-slate-800" : ""}`}>
+                <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
                 <div className="flex items-center gap-3">
                   {warn && warnMsg && (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">{warnMsg}</span>
+                    <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{warnMsg}</span>
                   )}
-                  <span className={`tabular-nums text-sm font-bold ${warn ? "text-amber-600 dark:text-amber-400" : "text-gray-900 dark:text-gray-100"}`}>
+                  <span className={`tabular-nums text-sm font-semibold ${warn ? "text-amber-700 dark:text-amber-400" : "text-slate-900 dark:text-slate-100"}`}>
                     {value.toLocaleString()}
                   </span>
                 </div>
@@ -118,45 +116,31 @@ export function DashboardClient({ session, stats }: Props) {
   );
 }
 
-type Color = "indigo" | "violet" | "sky" | "teal" | "amber" | "rose" | "gray";
-
-const C: Record<Color, { icon: string; text: string; border: string }> = {
-  indigo: { icon: "bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400", text: "text-indigo-700 dark:text-indigo-400", border: "hover:border-indigo-300 dark:hover:border-indigo-700" },
-  violet: { icon: "bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400", text: "text-violet-700 dark:text-violet-400", border: "hover:border-violet-300 dark:hover:border-violet-700" },
-  sky: { icon: "bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400", text: "text-sky-700 dark:text-sky-400", border: "hover:border-sky-300 dark:hover:border-sky-700" },
-  teal: { icon: "bg-teal-100 text-teal-600 dark:bg-teal-950 dark:text-teal-400", text: "text-teal-700 dark:text-teal-400", border: "hover:border-teal-300 dark:hover:border-teal-700" },
-  amber: { icon: "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400", text: "text-amber-700 dark:text-amber-400", border: "hover:border-amber-300 dark:hover:border-amber-700" },
-  rose: { icon: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400", text: "text-rose-700 dark:text-rose-400", border: "hover:border-rose-300 dark:hover:border-rose-700" },
-  gray: { icon: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", text: "text-gray-700 dark:text-gray-400", border: "hover:border-gray-300 dark:hover:border-gray-600" },
-};
-
-function StatCard({ label, value, sub, href, color, icon }: { label: string; value: number; sub?: string; href: string; color: Color; icon: React.ReactNode }) {
-  const c = C[color];
+function StatCard({ label, value, sub, href, icon }: { label: string; value: number; sub?: string; href: string; icon: React.ReactNode }) {
   return (
-    <a href={href} className="group flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+    <Link href={href} className="group flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 hover:bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-900/70">
       <div className="flex items-center justify-between">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.icon}`}><span className="h-5 w-5">{icon}</span></div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#eaf2f8] text-[#174f78] dark:bg-sky-950/40 dark:text-sky-200"><span className="h-5 w-5">{icon}</span></div>
         <svg className="h-4 w-4 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-400 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
       </div>
       <div>
-        <p className={`text-3xl font-bold tabular-nums ${c.text}`}>{value.toLocaleString()}</p>
-        <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
-        {sub && <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-600">{sub}</p>}
+        <p className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-100">{value.toLocaleString()}</p>
+        <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>
+        {sub && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{sub}</p>}
       </div>
-    </a>
+    </Link>
   );
 }
 
-function QuickCard({ href, title, description, icon, color }: { href: string; title: string; description: string; icon: React.ReactNode; color: Color }) {
-  const c = C[color];
+function QuickCard({ href, title, description, icon }: { href: string; title: string; description: string; icon: React.ReactNode }) {
   return (
-    <a href={href} className={`group flex items-start gap-4 rounded-2xl border border-gray-200 bg-white p-5 transition-all hover:shadow-sm dark:border-gray-800 dark:bg-gray-900 ${c.border}`}>
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${c.icon} transition-transform group-hover:scale-105`}><span className="h-5 w-5">{icon}</span></div>
+    <Link href={href} className="group flex items-start gap-4 rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 hover:bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#eaf2f8] text-[#174f78] dark:bg-sky-950/40 dark:text-sky-200"><span className="h-5 w-5">{icon}</span></div>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</p>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-500 leading-relaxed">{description}</p>
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{description}</p>
       </div>
-    </a>
+    </Link>
   );
 }
 

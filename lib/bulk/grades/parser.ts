@@ -1,9 +1,8 @@
 /**
  * Grade bulk upload CSV parser.
  *
- * Re-uses the same RFC 4180 parsing logic as the student parser
- * (copied here to avoid a cross-module coupling that would need
- * to be unwound if the student schema changes).
+ * Uses the same RFC 4180 parsing behavior as the student parser while
+ * keeping grade-specific headers and row types separate.
  *
  * Grade-specific additions:
  *   - Semester normalisation: "1", "first", "sem 1", "FIRST" → "FIRST"
@@ -14,7 +13,7 @@
 import type { RawGradeRow, GradeCSVColumn } from "./types";
 
 // ─── RFC 4180 core parser ──────────────────────────────────────────────────────
-// (Same algorithm as lib/bulk/parser.ts — see that file for line-by-line comments)
+// RFC 4180 parsing core.
 
 function parseCSV(text: string): string[][] {
   const clean = text.startsWith("\uFEFF") ? text.slice(1) : text;
@@ -102,6 +101,8 @@ const GRADE_HEADER_MAP: Record<string, GradeCSVColumn> = {
   code: "courseCode",
   subjectcode: "courseCode",
   subject: "courseCode",
+  coursecategory: "courseCategory",
+  category: "courseCategory",
 
   // semester variants
   semester: "semester",
@@ -119,6 +120,11 @@ const GRADE_HEADER_MAP: Record<string, GradeCSVColumn> = {
   score: "grade",
   result: "grade",
   lettergrade: "grade",
+
+  // Resit marker (optional; missing or blank means false)
+  isresit: "isResit",
+  resit: "isResit",
+  retake: "isResit",
 };
 
 // ─── Semester normalisation ───────────────────────────────────────────────────
@@ -145,38 +151,6 @@ export function normaliseSemester(raw: string): "FIRST" | "SECOND" | null {
  */
 export function normaliseGrade(raw: string): string {
   return raw.trim().toUpperCase().replace(/\s+/g, "");
-}
-
-// ─── Template generator ───────────────────────────────────────────────────────
-
-export function generateGradeCSVTemplate(): string {
-  const headers = [
-    "indexNumber",
-    "courseCode",
-    "semester",
-    "year",
-    "grade",
-  ].join(",");
-
-  const exampleRows = [
-    ["CS/2021/001", "MATH101", "FIRST", "2021", "A"].join(","),
-    ["CS/2021/002", "MATH101", "FIRST", "2021", "B+"].join(","),
-    ["CS/2021/001", "PHYS101", "SECOND", "2021", "C"].join(","),
-  ].join("\n");
-
-  const notes = [
-    "# GRADE BULK UPLOAD TEMPLATE",
-    "# Instructions:",
-    "# - Comment rows before the header are ignored during upload",
-    "# - indexNumber must match an existing student",
-    "# - courseCode must match an existing active course",
-    "# - semester must be FIRST or SECOND",
-    "# - year is the academic year (e.g. 2021 for 2021/2022)",
-    "# - grade must be one of: A, B+, B, C+, C, D+, D, E, IC",
-    "# - duplicate (indexNumber + courseCode + semester + year) rows are rejected",
-  ].join("\n");
-
-  return `${notes}\n${headers}\n${exampleRows}\n`;
 }
 
 // ─── Main parse function ──────────────────────────────────────────────────────
@@ -254,9 +228,11 @@ export function parseGradeCSV(text: string): GradeParseResult {
       rawLine: row.join(","),
       indexNumber: mapped.indexNumber,
       courseCode: mapped.courseCode,
+      courseCategory: mapped.courseCategory,
       semester: mapped.semester,
       year: mapped.year,
       grade: mapped.grade,
+      isResit: mapped.isResit,
     };
   });
 

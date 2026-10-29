@@ -1,11 +1,7 @@
 "use client";
 
 /**
- * components/admin/AdminCampusAssign.tsx
- *
- * Multi-campus selector shown inside the admin user edit modal.
- * Allows SUPER_ADMIN to assign one or more campuses to an admin.
- * Zero checkboxes ticked = SUPER_ADMIN access (sees all campuses).
+ * Multi-campus selector for assigning student-record access to an admin.
  */
 
 import { useState, useTransition } from "react";
@@ -17,13 +13,14 @@ type Campus = { id: string; name: string; code: string };
 type Props = {
     adminId: string;
     adminName: string;
+    adminRole: "SUPER_ADMIN" | "ADMIN" | "VIEWER";
     allCampuses: Campus[];
     assignedCampusIds: string[];
     onDone?: () => void;
 };
 
 export function AdminCampusAssign({
-    adminId, adminName, allCampuses, assignedCampusIds, onDone,
+    adminId, adminName, adminRole, allCampuses, assignedCampusIds, onDone,
 }: Props) {
     const toast = useToast();
     const [selected, setSelected] = useState<Set<string>>(new Set(assignedCampusIds));
@@ -41,11 +38,7 @@ export function AdminCampusAssign({
         startTransition(async () => {
             const r = await setAdminCampusesAction(adminId, Array.from(selected));
             if (r.status === "success") {
-                toast.success(
-                    selected.size === 0
-                        ? `${adminName} now has SUPER_ADMIN-level campus access.`
-                        : `${adminName} assigned to ${selected.size} campus${selected.size !== 1 ? "es" : ""}.`
-                );
+                toast.success(`${adminName}'s campus assignments were saved. Changes apply after their next sign-in.`);
                 onDone?.();
             } else if (r.status === "error") {
                 toast.error(r.error);
@@ -53,7 +46,7 @@ export function AdminCampusAssign({
         });
     }
 
-    const isSuperAccess = selected.size === 0;
+    const hasNoCampusAccess = selected.size === 0 && adminRole !== "SUPER_ADMIN";
 
     return (
         <div className="space-y-4">
@@ -62,13 +55,17 @@ export function AdminCampusAssign({
                     Campus access for <span className="font-semibold">{adminName}</span>
                 </p>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Tick the campuses this admin can access. Leave all unticked to grant full access across all campuses.
+                    Select the campuses this account can access. Super Admins always have access to every campus.
                 </p>
             </div>
 
             {/* Campuses checklist */}
             <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                {allCampuses.map(campus => (
+                {allCampuses.length === 0 ? (
+                    <p className="px-2 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        No campuses are available to assign.
+                    </p>
+                ) : allCampuses.map(campus => (
                     <label key={campus.id}
                         className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white dark:hover:bg-gray-800 transition-colors">
                         <input
@@ -86,13 +83,13 @@ export function AdminCampusAssign({
             </div>
 
             {/* Access level indicator */}
-            {isSuperAccess ? (
+            {hasNoCampusAccess ? (
                 <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20">
                     <svg className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
                     </svg>
                     <p className="text-xs text-amber-800 dark:text-amber-300">
-                        No campuses selected — this admin will have <strong>full access to all campuses</strong> (same as SUPER_ADMIN).
+                        No campuses selected — this account will not be able to access student records.
                     </p>
                 </div>
             ) : (
@@ -110,7 +107,7 @@ export function AdminCampusAssign({
             <button
                 type="button"
                 onClick={handleSave}
-                disabled={isPending}
+                disabled={isPending || allCampuses.length === 0}
                 className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
                 {isPending ? "Saving…" : "Save campus access"}
             </button>

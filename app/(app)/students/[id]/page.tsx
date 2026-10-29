@@ -12,6 +12,7 @@
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requireAuth, can } from "@/lib/auth/rbac";
+import { canAccessStudent } from "@/lib/auth/campus";
 import { db } from "@/db";
 import { students, programmes } from "@/db/schema";
 import { fetchStudentGradeRows } from "@/lib/grades/queries";
@@ -32,6 +33,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
     db
       .select({
         id: students.id,
+        campusId: students.campusId,
         indexNumber: students.indexNumber,
         firstName: students.firstName,
         lastName: students.lastName,
@@ -53,8 +55,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
   if (studentRows.length === 0) notFound();
   const student = studentRows[0];
+  if (!canAccessStudent(session, student.campusId)) notFound();
 
-  const canEdit = can(session, "manage_students");
+  const canEdit = session.role === "SUPER_ADMIN";
   const canGrades = can(session, "enter_grades");
 
   // Group display rows by semesterId for the tables (GPA already computed)
