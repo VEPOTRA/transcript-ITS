@@ -57,7 +57,7 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
 // ─── Resend ───────────────────────────────────────────────────────────────────
 
 async function sendViaResend(payload: EmailPayload): Promise<void> {
-  const from = process.env.EMAIL_FROM ?? "TMS <noreply@tms.app>";
+  const from = process.env.EMAIL_FROM;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
