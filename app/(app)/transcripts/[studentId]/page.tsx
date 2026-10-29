@@ -15,18 +15,26 @@ import { notFound } from "next/navigation";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, can } from "@/lib/auth/rbac";
 import { db } from "@/db";
-import { transcripts } from "@/db/schema";
+import { students, transcripts } from "@/db/schema";
 import { assembleTranscript } from "@/lib/transcript";
+import { canAccessStudent } from "@/lib/auth/campus";
 import {
   TranscriptPreview,
-  TranscriptActionBar,
-  TranscriptHistoryPanel,
 } from "@/components/transcript";
 
 type PageProps = { params: Promise<{ studentId: string }> };
 
 export async function generateMetadata({ params }: PageProps) {
+  const session = await requireAuth();
   const { studentId } = await params;
+  const [student] = await db
+    .select({ campusId: students.campusId })
+    .from(students)
+    .where(eq(students.id, studentId))
+    .limit(1);
+  if (!student || !canAccessStudent(session, student.campusId)) {
+    return { title: "Transcript — TMS" };
+  }
   const result = await assembleTranscript(studentId);
   if (!result.ok) return { title: "Transcript — TMS" };
   return { title: `${result.transcript.student.fullName} — Transcript — TMS` };
@@ -35,6 +43,13 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function TranscriptDetailPage({ params }: PageProps) {
   const session = await requireAuth();
   const { studentId } = await params;
+
+  const [student] = await db
+    .select({ campusId: students.campusId })
+    .from(students)
+    .where(eq(students.id, studentId))
+    .limit(1);
+  if (!student || !canAccessStudent(session, student.campusId)) notFound();
 
   const [assembleResult, rawRecords] = await Promise.all([
     assembleTranscript(studentId),
@@ -67,14 +82,6 @@ export default async function TranscriptDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-0">
-      {/* Sticky action bar — hidden on print */}
-      {/* <TranscriptActionBar
-        studentId={studentId}
-        studentName={transcript.student.fullName}
-        canGenerate={canGenerate}
-        latestRecordId={latestRecord?.id ?? null}
-      /> */}
-
       {/* The document itself */}
       {/* data-transcript-ref is read by the copy-ref button */}
       <div data-transcript-ref={displayTranscript.transcriptNumber}>
@@ -85,7 +92,7 @@ export default async function TranscriptDetailPage({ params }: PageProps) {
       </div>
 
       {/* History of generated PDFs — hidden on print */}
-      <TranscriptHistoryPanel records={rawRecords} canDelete={canGenerate} />
+      {/* <TranscriptHistoryPanel records={rawRecords} canDelete={canGenerate} /> */}
     </div>
   );
 }

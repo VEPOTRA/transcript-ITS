@@ -4,7 +4,7 @@
  * Search-on-demand: no DB query until the user submits a search.
  * Accepts ?q= URL param — populated by the search form in StudentsClient.
  */
-import { requireAuth } from "@/lib/auth/rbac";
+import { can, requireAuth } from "@/lib/auth/rbac";
 import { searchStudents } from "@/actions/crud/students";
 import { getProgrammes } from "@/actions/crud/programmes";
 import { getCampuses } from "@/actions/crud/campuses";
@@ -24,13 +24,16 @@ export default async function StudentsPage({
     : (session.campusIds ?? []);
 
   // Only run the student query when there is an actual search term
-  const [students, programmes, campuses] = await Promise.all([
+  const [students, programmes, allCampuses] = await Promise.all([
     query.length >= 2
       ? searchStudents(query, campusIds)
       : Promise.resolve([]),
     getProgrammes(),
     getCampuses(),
   ]);
+  const campuses = session.role === "SUPER_ADMIN"
+    ? allCampuses
+    : allCampuses.filter((campus) => session.campusIds.includes(campus.id));
 
   return (
     <StudentsClient
@@ -38,6 +41,8 @@ export default async function StudentsPage({
       programmes={programmes}
       campuses={campuses}
       initialQuery={query}
+      canCreateStudents={can(session, "manage_students")}
+      canEditStudents={session.role === "SUPER_ADMIN"}
     />
   );
 }

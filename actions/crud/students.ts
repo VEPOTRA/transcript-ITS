@@ -22,7 +22,7 @@ const studentSchema = z.object({
   studentType: z
     .enum(["UNDERGRADUATE", "POSTGRADUATE"])
     .default("UNDERGRADUATE"),
-  campusId: z.string().uuid("Invalid campus ID").optional(),
+  campusId: z.string().uuid("Invalid campus ID").nullable().optional(),
   dateOfBirth: z.string().nullable().optional(),
   gender: z.preprocess(
     (value) => {
@@ -93,6 +93,15 @@ export async function createStudentAction(
   }
 
   const d = parsed.data;
+  if (
+    session.role !== "SUPER_ADMIN" &&
+    (!d.campusId || !session.campusIds.includes(d.campusId))
+  ) {
+    return {
+      status: "error",
+      error: "Select a campus assigned to your account.",
+    };
+  }
 
   try {
     const [created] = await db
@@ -152,6 +161,9 @@ export async function updateStudentAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await assertPermission("manage_students");
+  if (session.role !== "SUPER_ADMIN") {
+    throw new Error("FORBIDDEN: only Super Admins can update students.");
+  }
 
   const parsed = studentUpdateSchema.safeParse({
     id: str(formData, "id"),
@@ -162,7 +174,7 @@ export async function updateStudentAction(
     studentType: (str(formData, "studentType") ?? "UNDERGRADUATE") as
       | "UNDERGRADUATE"
       | "POSTGRADUATE",
-    campusId: str(formData, "campusId") ?? undefined,
+    campusId: str(formData, "campusId"),
     dateOfBirth: str(formData, "dateOfBirth"),
     gender: str(formData, "gender"),
     programmeId: str(formData, "programmeId"),
@@ -249,6 +261,9 @@ export async function updateStudentAction(
 
 export async function deleteStudentAction(id: string): Promise<ActionState> {
   const session = await assertPermission("manage_students");
+  if (session.role !== "SUPER_ADMIN") {
+    throw new Error("FORBIDDEN: only Super Admins can delete students.");
+  }
 
   const [existing] = await db
     .select()
@@ -292,6 +307,9 @@ export async function updateStudentStatusAction(
   status: "ACTIVE" | "GRADUATED" | "WITHDRAWN",
 ): Promise<ActionState> {
   const session = await assertPermission("manage_students");
+  if (session.role !== "SUPER_ADMIN") {
+    throw new Error("FORBIDDEN: only Super Admins can update student status.");
+  }
 
   const [existing] = await db
     .select()
@@ -347,7 +365,10 @@ export async function getStudents(campusIds?: string[] | null) {
     .leftJoin(programmes, eq(students.programmeId, programmes.id))
     .leftJoin(campuses, eq(students.campusId, campuses.id));
 
-  // Campus filter: empty/null = SUPER_ADMIN (no restriction); array = campus-restricted
+  // Null/undefined is unrestricted; an empty array has no campus access.
+  if (campusIds && campusIds.length === 0) {
+    return base.where(sql`false`).orderBy(desc(students.createdAt));
+  }
   if (campusIds && campusIds.length > 0) {
     return base
       .where(inArray(students.campusId, campusIds))
@@ -399,7 +420,8 @@ export async function searchStudents(
     ilike(sql`COALESCE(${students.middleName}, '')`, q),
   );
 
-  if (campusIds && campusIds.length > 0) {
+  if (campusIds && campusIds.length === 0) return [];
+  if (campusIds !== null) {
     return base
       .where(and(searchCondition, inArray(students.campusId, campusIds)))
       .orderBy(students.indexNumber)
@@ -442,14 +464,13 @@ export async function getStudentById(
 
   if (!row) return null;
 
-  // Campus enforcement: if campusIds provided, student must belong to one of them
   if (
-    campusIds &&
-    campusIds.length > 0 &&
-    row.campusId &&
-    !campusIds.includes(row.campusId)
-  )
+    campusIds !== undefined &&
+    campusIds !== null &&
+    (campusIds.length === 0 || !campusIds.includes(row.campusId ?? ""))
+  ) {
     return null;
+  }
 
   return row;
 }

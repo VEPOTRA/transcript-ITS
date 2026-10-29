@@ -7,8 +7,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { AdminCampusAssign } from "@/components/admin/AdminCampusAssign";
 
-type Admin = { id: string; email: string; role: "SUPER_ADMIN" | "ADMIN" | "VIEWER"; isActive: boolean; createdAt: string };
+type Campus = { id: string; name: string; code: string };
+type Admin = {
+  id: string;
+  email: string;
+  role: "SUPER_ADMIN" | "ADMIN" | "VIEWER";
+  isActive: boolean;
+  createdAt: string;
+  campuses?: Campus[];
+  assignedCampusIds?: string[];
+};
 
 export default function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -18,6 +28,8 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [assignedCampusIds, setAssignedCampusIds] = useState<string[]>([]);
 
   // Form state
   const [role, setRole] = useState<"SUPER_ADMIN" | "ADMIN" | "VIEWER">("ADMIN");
@@ -34,6 +46,8 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
           if (data.error) { setError(data.error); return; }
           setAdmin(data);
           setRole(data.role);
+          setCampuses(data.campuses ?? []);
+          setAssignedCampusIds(data.assignedCampusIds ?? []);
         })
         .catch(() => setError("Failed to load admin."))
         .finally(() => setLoading(false));
@@ -141,6 +155,17 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
               className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">
               {saving ? "Saving…" : "Save changes"}
             </button>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+            <AdminCampusAssign
+              adminId={admin.id}
+              adminName={admin.email}
+              adminRole={admin.role}
+              allCampuses={campuses}
+              assignedCampusIds={assignedCampusIds}
+              onDone={() => router.refresh()}
+            />
           </div>
 
           {/* Enable / Disable */}

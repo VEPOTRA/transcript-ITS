@@ -127,6 +127,15 @@ export function AppShell({ session, children, pathname }: Props) {
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase() ?? "")
     .join("");
+  const displayName = session.email
+    .split("@")[0]
+    .replace(/[._-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const roleLabel = {
+    SUPER_ADMIN: "Super Admin",
+    ADMIN: "Admin",
+    VIEWER: "Viewer",
+  }[session.role];
 
   const pageLabel = getPageLabel(pathname);
 
@@ -223,44 +232,31 @@ export function AppShell({ session, children, pathname }: Props) {
         </nav>
 
         {/* User footer */}
-        <div className="shrink-0 space-y-1 border-t border-slate-200 p-3 dark:border-slate-800">
-          {/* Profile link */}
-          <Link href="/profile"
-            className="group flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
-            <div className={[
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-              "bg-[#174f78] text-white",
-            ].join(" ")}>
-              {initials || session.email[0].toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-gray-900 dark:text-gray-100">
-                {session.email}
-              </p>
-              {/* <div className="mt-1 flex flex-wrap items-center gap-1">
-                <span className={[
-                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  ROLE_STYLES[session.role],
-                ].join(" ")}>
-                  {session.role.replace("_", " ")}
-                </span>
-                {(session.role === "SUPER_ADMIN" || session.campusIds.length > 0) && (
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {session.role === "SUPER_ADMIN" ? "All campuses" : `${session.campusIds.length} campus${session.campusIds.length === 1 ? "" : "es"}`}
-                  </span>
-                )}
-              </div> */}
-            </div>
-          </Link>
-
-          {/* Sign out */}
-          <form action={logoutAction}>
-            <button type="submit"
-              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-red-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-red-300">
-              <LogoutIcon />
-              Sign out
-            </button>
-          </form>
+        <div className="shrink-0 border-t border-slate-200 p-4 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-2">
+            <Link href="/profile"
+              className="group flex min-w-0 items-center rounded-md transition-colors hover:opacity-80">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-xs font-bold text-white shadow-md">
+                {initials || session.email[0].toUpperCase()}
+              </div>
+              <div className="ml-3 min-w-0">
+                <p className="truncate text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  {displayName}
+                </p>
+                <p className="text-[10px] text-slate-400">{roleLabel}</p>
+              </div>
+            </Link>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                aria-label="Sign out"
+                title="Sign out"
+                className="rounded-md p-2 text-slate-400 transition-colors hover:text-rose-500"
+              >
+                <LogoutIcon />
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
 

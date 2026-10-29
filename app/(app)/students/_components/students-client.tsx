@@ -43,6 +43,8 @@ type Props = {
   programmes: Programme[];
   campuses: Campus[];
   initialQuery?: string;
+  canCreateStudents: boolean;
+  canEditStudents: boolean;
 };
 
 const STATUS_BADGE: Record<string, "green" | "gray" | "red"> = {
@@ -67,7 +69,14 @@ function genderFormValue(gender: string | null): string {
   }
 }
 
-export function StudentsClient({ initial, programmes, campuses, initialQuery = "" }: Props) {
+export function StudentsClient({
+  initial,
+  programmes,
+  campuses,
+  initialQuery = "",
+  canCreateStudents,
+  canEditStudents,
+}: Props) {
   const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -140,7 +149,9 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
       <PageHeader
         title="Students"
         description={`${students.length} student${students.length !== 1 ? "s" : ""}`}
-        action={<Button variant="primary" onClick={() => setShowCreate(true)} icon={<PlusIcon />}>Add student</Button>}
+        action={canCreateStudents ? (
+          <Button variant="primary" onClick={() => setShowCreate(true)} icon={<PlusIcon />}>Add student</Button>
+        ) : undefined}
       />
 
       {/* Search + status filters */}
@@ -215,7 +226,7 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
       {paginated.length > 0 && (
         <div className="space-y-3">
           {paginated.map(s => (
-            <StudentCard key={s.id} student={s}
+            <StudentCard key={s.id} student={s} canEdit={canEditStudents}
               onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} />
           ))}
           <Pagination page={page} perPage={perPage} total={total} totalPages={totalPages}
@@ -224,7 +235,7 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
       )}
 
       {/* ── Create modal ──────────────────────────────────────────────────────── */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add student"
+      {canCreateStudents && <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add student"
         footer={<>
           <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
           <Button variant="primary" type="submit" form="create-student-form">Add student</Button>
@@ -245,7 +256,7 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
             <Input name="indexNumber" placeholder="WIN/2023/001" required />
           </Field>
           <Field label="Campus" required>
-            <Select name="campusId">
+          <Select name="campusId" required>
               <option value="">— Select campus —</option>
               {campuses.map(c => (
                 <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
@@ -261,8 +272,8 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
             </Select>
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Level" required hint="100, 200, 300, 400 or 500">
-              <Input name="level" type="number" min={100} max={900} step={100} placeholder="100" required />
+            <Field label="Level" required hint="For example: 101, 201 or 701">
+              <Input name="level" type="number" min={100} max={900} step={1} placeholder="100" required />
             </Field>
             <Field label="Student type" required>
               <Select name="studentType" defaultValue="UNDERGRADUATE">
@@ -308,25 +319,27 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
             </Select>
           </Field>
         </form>
-      </Modal>
+      </Modal>}
 
       {/* ── Edit modal ───────────────────────────────────────────────────────── */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit student"
+      {canEditStudents && <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit student" size="lg"
         footer={<>
           <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
           <Button variant="primary" type="submit" form="edit-student-form">Save changes</Button>
         </>}>
         {editing && (
-          <form id="edit-student-form" action={handleEdit} className="space-y-4">
+          <form
+            id="edit-student-form"
+            action={handleEdit}
+            className="grid max-h-[calc(100dvh-13rem)] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2"
+          >
             <input type="hidden" name="id" value={editing.id} />
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="First name" required>
-                <Input name="firstName" defaultValue={editing.firstName} required />
-              </Field>
-              <Field label="Last name" required>
-                <Input name="lastName" defaultValue={editing.lastName} required />
-              </Field>
-            </div>
+            <Field label="First name" required>
+              <Input name="firstName" defaultValue={editing.firstName} required />
+            </Field>
+            <Field label="Last name" required>
+              <Input name="lastName" defaultValue={editing.lastName} required />
+            </Field>
             <Field label="Middle name">
               <Input name="middleName" defaultValue={editing.middleName ?? ""} />
             </Field>
@@ -348,46 +361,38 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
                 ))}
               </Select>
             </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Level" required>
-                <Input name="level" type="number" min={100} max={900} step={100} defaultValue={editing.level} required />
-              </Field>
-              <Field label="Student type" required>
-                <Select name="studentType" defaultValue={editing.studentType ?? "UNDERGRADUATE"}>
-                  <option value="UNDERGRADUATE">Undergraduate</option>
-                  <option value="POSTGRADUATE">Postgraduate</option>
-                </Select>
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Entry year" required>
-                <Input name="entryYear" defaultValue={editing.entryYear} required />
-              </Field>
-              <Field label="Graduation year">
-                <Input name="graduationYear" defaultValue={editing.graduationYear ?? ""} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Gender">
-                <Select name="gender" defaultValue={genderFormValue(editing.gender)}>
-                  <option value="">— Select —</option>
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                  <option value="OTHER">Other</option>
-                </Select>
-              </Field>
-              <Field label="Date of birth">
-                <Input name="dateOfBirth" type="date" defaultValue={editing.dateOfBirth ?? ""} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Email">
-                <Input name="email" type="email" defaultValue={editing.email ?? ""} />
-              </Field>
-              <Field label="Phone number">
-                <Input name="phoneNumber" defaultValue={editing.phoneNumber ?? ""} />
-              </Field>
-            </div>
+            <Field label="Level" required>
+              <Input name="level" type="number" min={100} max={900} step={1} defaultValue={editing.level} required />
+            </Field>
+            <Field label="Student type" required>
+              <Select name="studentType" defaultValue={editing.studentType ?? "UNDERGRADUATE"}>
+                <option value="UNDERGRADUATE">Undergraduate</option>
+                <option value="POSTGRADUATE">Postgraduate</option>
+              </Select>
+            </Field>
+            <Field label="Entry year" required>
+              <Input name="entryYear" defaultValue={editing.entryYear} required />
+            </Field>
+            <Field label="Graduation year">
+              <Input name="graduationYear" defaultValue={editing.graduationYear ?? ""} />
+            </Field>
+            <Field label="Gender">
+              <Select name="gender" defaultValue={genderFormValue(editing.gender)}>
+                <option value="">— Select —</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </Select>
+            </Field>
+            <Field label="Date of birth">
+              <Input name="dateOfBirth" type="date" defaultValue={editing.dateOfBirth ?? ""} />
+            </Field>
+            <Field label="Email">
+              <Input name="email" type="email" defaultValue={editing.email ?? ""} />
+            </Field>
+            <Field label="Phone number">
+              <Input name="phoneNumber" defaultValue={editing.phoneNumber ?? ""} />
+            </Field>
             <Field label="Status">
               <Select name="status" defaultValue={editing.status}>
                 <option value="ACTIVE">Active</option>
@@ -397,21 +402,31 @@ export function StudentsClient({ initial, programmes, campuses, initialQuery = "
             </Field>
           </form>
         )}
-      </Modal>
+      </Modal>}
 
-      <ConfirmDialog
+      {canEditStudents && <ConfirmDialog
         open={!!deleting} onClose={() => setDeleting(null)} onConfirm={handleDelete}
         title="Delete student"
         message={`Delete ${deleting?.firstName} ${deleting?.lastName} (${deleting?.indexNumber})? Their grade records will also be removed. This cannot be undone.`}
         confirmLabel="Delete" danger loading={delLoading}
-      />
+      />}
     </div>
   );
 }
 
 // ─── Student card ─────────────────────────────────────────────────────────────
 
-function StudentCard({ student, onEdit, onDelete }: { student: Student; onEdit: () => void; onDelete: () => void }) {
+function StudentCard({
+  student,
+  canEdit,
+  onEdit,
+  onDelete,
+}: {
+  student: Student;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-shadow hover:shadow dark:border-gray-800 dark:bg-gray-900">
       <div className="min-w-0">
@@ -440,12 +455,14 @@ function StudentCard({ student, onEdit, onDelete }: { student: Student; onEdit: 
           <span className="text-xs text-gray-400">Level {student.level} · {student.entryYear}</span>
         </div>
       </div>
-      <div className="ml-4 flex shrink-0 items-center gap-1">
-        <Button size="sm" variant="ghost" onClick={onEdit}>Edit</Button>
-        <Button size="sm" variant="ghost" onClick={onDelete} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
-          Delete
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="ml-4 flex shrink-0 items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={onEdit}>Edit</Button>
+          <Button size="sm" variant="ghost" onClick={onDelete} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
+            Delete
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

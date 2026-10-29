@@ -117,19 +117,22 @@ export async function loginAction(
       campusIds = campusRows.map((r) => r.campusId);
     }
   } catch {
-    // admin_campuses table doesn't exist yet — run migration-admin-campuses.sql
-    // Login still succeeds; campus filtering won't be enforced until migration runs.
-    console.warn(
-      "[login] admin_campuses not ready — run migration. Defaulting to full access.",
-    );
-    campusIds = [];
+    if (admin.role !== "SUPER_ADMIN") {
+      console.error(
+        "[login] admin_campuses is unavailable; refusing unrestricted login for a campus-scoped account.",
+      );
+      return {
+        status: "error",
+        error: "Campus access is not configured. Contact a Super Admin.",
+      };
+    }
   }
 
   await createSession({
     adminId: admin.id,
     email: admin.email,
     role: admin.role,
-    campusIds, // empty = SUPER_ADMIN / full access
+    campusIds,
   });
 
   await logAuditEvent({

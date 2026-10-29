@@ -8,8 +8,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { campuses, admins, adminCampuses } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { campuses, admins, adminCampuses, students } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 import { assertPermission } from "@/lib/auth/rbac";
 import type { ActionState } from "@/types/auth";
 
@@ -36,7 +36,7 @@ export async function getCampusById(id: string): Promise<Campus | null> {
   return row ?? null;
 }
 
-/** Returns all campus IDs assigned to a given admin (empty = SUPER_ADMIN) */
+/** Returns the campus IDs assigned to a given admin. */
 export async function getAdminCampusIds(adminId: string): Promise<string[]> {
   try {
     const rows = await db
@@ -45,7 +45,7 @@ export async function getAdminCampusIds(adminId: string): Promise<string[]> {
       .where(eq(adminCampuses.adminId, adminId));
     return rows.map((r) => r.campusId);
   } catch {
-    // Table doesn't exist yet — run migration-admin-campuses.sql in Neon SQL Editor
+    // The setup guide requires applying the admin-campus migration first.
     return [];
   }
 }
@@ -162,18 +162,52 @@ export async function setAdminCampusesAction(
 ): Promise<ActionState> {
   await assertPermission("manage_users");
 
-  // Delete all existing assignments for this admin
-  await db.delete(adminCampuses).where(eq(adminCampuses.adminId, adminId));
-
-  // Insert new assignments (if any)
-  if (campusIds.length > 0) {
-    await db
-      .insert(adminCampuses)
-      .values(campusIds.map((campusId) => ({ adminId, campusId })));
+  const parsedAdminId = z.string().uuid().safeParse(adminId);
+  const parsedCampusIds = z.array(z.string().uuid()).safeParse(campusIds);
+  if (!parsedAdminId.success || !parsedCampusIds.success) {
+    return { status: "error", error: "Select a valid admin and campus list." };
   }
 
-  revalidatePath("/admin/users");
-  return { status: "success" };
+  const uniqueCampusIds = [...new Set(parsedCampusIds.data)];
+  const [admin] = await db
+    .select({ id: admins.id })
+    .from(admins)
+    .where(eq(admins.id, parsedAdminId.data))
+    .limit(1);
+  if (!admin) return { status: "error", error: "Admin account not found." };
+
+  if (uniqueCampusIds.length > 0) {
+    const existingCampuses = await db
+      .select({ id: campuses.id })
+      .from(campuses)
+      .where(inArray(campuses.id, uniqueCampusIds));
+    if (existingCampuses.length !== uniqueCampusIds.length) {
+      return { status: "error", error: "One or more selected campuses do not exist." };
+    }
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(adminCampuses)
+        .where(eq(adminCampuses.adminId, parsedAdminId.data));
+      if (uniqueCampusIds.length > 0) {
+        await tx.insert(adminCampuses).values(
+          uniqueCampusIds.map((campusId) => ({
+            adminId: parsedAdminId.data,
+            campusId,
+          })),
+        );
+      }
+    });
+
+    revalidatePath("/admin/users");
+    revalidatePath(`/admin/users/${parsedAdminId.data}`);
+    return { status: "success" };
+  } catch (error) {
+    console.error("[setAdminCampusesAction]", error);
+    return { status: "error", error: "Failed to update campus assignments." };
+  }
 }
 
 // ─── Add a single campus to an admin ─────────────────────────────────────────
@@ -199,7 +233,14 @@ export async function removeAdminCampusAction(
   campusId: string,
 ): Promise<ActionState> {
   await assertPermission("manage_users");
-  await db.delete(adminCampuses).where(eq(adminCampuses.adminId, adminId));
+  await db
+    .delete(adminCampuses)
+    .where(
+      and(
+        eq(adminCampuses.adminId, adminId),
+        eq(adminCampuses.campusId, campusId),
+      ),
+    );
   revalidatePath("/admin/users");
   return { status: "success" };
 }
@@ -210,8 +251,10 @@ export async function assignStudentCampusAction(
   studentId: string,
   campusId: string,
 ): Promise<ActionState> {
-  await assertPermission("manage_students");
-  const { students } = await import("@/db/schema");
+  const session = await assertPermission("manage_students");
+  if (session.role !== "SUPER_ADMIN") {
+    throw new Error("FORBIDDEN: only Super Admins can assign student campuses.");
+  }
   await db.update(students).set({ campusId }).where(eq(students.id, studentId));
   revalidatePath("/students");
   return { status: "success" };

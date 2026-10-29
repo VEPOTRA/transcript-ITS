@@ -8,7 +8,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { admins } from "@/db/schema";
+import { adminCampuses, admins, campuses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyToken } from "@/lib/auth/jwt";
 import { COOKIE_NAME } from "@/lib/auth/config";
@@ -50,7 +50,26 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     .limit(1);
 
   if (!admin) return MISSING();
-  return NextResponse.json(admin);
+
+  const [allCampuses, assignedCampuses] = await Promise.all([
+    db
+      .select({
+        id: campuses.id,
+        name: campuses.name,
+        code: campuses.code,
+      })
+      .from(campuses)
+      .orderBy(campuses.name),
+    db
+      .select({ campusId: adminCampuses.campusId })
+      .from(adminCampuses)
+      .where(eq(adminCampuses.adminId, id)),
+  ]);
+  return NextResponse.json({
+    ...admin,
+    campuses: allCampuses,
+    assignedCampusIds: assignedCampuses.map(({ campusId }) => campusId),
+  });
 }
 
 // ─── PATCH ───────────────────────────────────────────────────────────────────

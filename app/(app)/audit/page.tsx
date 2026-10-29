@@ -1,8 +1,7 @@
 /**
  * /audit — Audit log viewer.
  *
- * Access: ADMIN and SUPER_ADMIN only (view_audit_logs permission).
- * VIEWER role is explicitly excluded at the permission level.
+ * Access: SUPER_ADMIN only (view_audit_logs permission).
  *
  * Architecture:
  *   - page.tsx             (server) — fetches rows, stats, actors in parallel
@@ -51,7 +50,7 @@ type PageProps = {
 };
 
 export default async function AuditPage({ searchParams }: PageProps) {
-  // ── Permission check — ADMIN+ only ────────────────────────────────────────
+  // ── Permission check — SUPER_ADMIN only ───────────────────────────────────
   await requirePermission("view_audit_logs");
 
   const params = await searchParams;
@@ -83,7 +82,7 @@ export default async function AuditPage({ searchParams }: PageProps) {
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
           <LockIcon />
-          ADMIN and SUPER_ADMIN access only
+          SUPER_ADMIN access only
         </div>
       </div>
 

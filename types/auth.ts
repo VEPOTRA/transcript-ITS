@@ -14,7 +14,7 @@ export type SessionPayload = {
   adminId: string;
   email: string;
   role: Role;
-  campusIds: string[]; // empty array = SUPER_ADMIN (unrestricted); 1+ = campus-restricted
+  campusIds: string[]; // SUPER_ADMIN is unrestricted; other roles need assigned campuses.
 };
 
 /**
