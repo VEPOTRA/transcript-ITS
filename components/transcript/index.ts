@@ -3,5 +3,5 @@
  */
 export { TranscriptPreview } from "./preview";
 export type { TranscriptPreviewProps } from "./preview";
-export { TranscriptActionBar } from "./action-bar";
-export { TranscriptHistoryPanel } from "./transcript-history-panel";
+// export { TranscriptActionBar } from "./action-bar";
+// export { TranscriptHistoryPanel } from "./transcript-history-panel";
