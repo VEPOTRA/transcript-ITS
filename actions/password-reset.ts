@@ -49,11 +49,25 @@ export async function requestPasswordResetAction(
 
   // ── Find admin ─────────────────────────────────────────────────────────────
   // Always return success even if email not found — prevents email enumeration
-  const [admin] = await db
-    .select({ id: admins.id, email: admins.email, isActive: admins.isActive })
-    .from(admins)
-    .where(eq(admins.email, email))
-    .limit(1);
+  let admin: { id: string; email: string; isActive: boolean } | undefined;
+  try {
+    [admin] = await db
+      .select({
+        id: admins.id,
+        email: admins.email,
+        isActive: admins.isActive,
+      })
+      .from(admins)
+      .where(eq(admins.email, email))
+      .limit(1);
+  } catch (err) {
+    console.error("[requestPasswordReset] Admin lookup failed:", err);
+    return {
+      status: "error",
+      error:
+        "Password reset is temporarily unavailable because the account database could not be reached. Please contact your administrator.",
+    };
+  }
 
   // If no admin found or inactive — still return success (security: don't reveal if email exists)
   if (!admin || !admin.isActive) {
@@ -89,7 +103,10 @@ export async function requestPasswordResetAction(
     process.env.APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "http://localhost:3000";
-  const resetUrl = `${appUrl}/reset-password/${rawToken}`;
+  const resetUrl = new URL(
+    `/reset-password/${rawToken}`,
+    appUrl.endsWith("/") ? appUrl : `${appUrl}/`,
+  ).toString();
   const institution =
     process.env.INSTITUTION_NAME ?? "University of Education, Winneba";
 
