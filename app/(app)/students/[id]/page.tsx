@@ -57,7 +57,8 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const student = studentRows[0];
   if (!canAccessStudent(session, student.campusId)) notFound();
 
-  const canEdit = session.role === "SUPER_ADMIN";
+  const canEditBio = can(session, "manage_students");
+  const canEditStatus = session.role === "SUPER_ADMIN";
   const canGrades = can(session, "enter_grades");
 
   // Group display rows by semesterId for the tables (GPA already computed)
@@ -96,7 +97,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
           <div className="flex flex-col items-end gap-2">
             <StatusBadge status={student.status} />
-            {canEdit && <StudentStatusForm studentId={id} currentStatus={student.status} />}
+            {canEditStatus && <StudentStatusForm studentId={id} currentStatus={student.status} />}
           </div>
         </div>
 
@@ -142,12 +143,12 @@ export default async function StudentDetailPage({ params }: PageProps) {
             Enter grade
           </a>
         )}
-        {canEdit && (
+        {canEditBio && (
           <a
-            href={`/students/${id}/edit`}
+            href={`/students?q=${encodeURIComponent(student.indexNumber)}`}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Edit details
+            Edit bio data
           </a>
         )}
       </div>

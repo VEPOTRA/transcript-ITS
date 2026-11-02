@@ -231,7 +231,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const BTN: Record<ButtonVariant, string> = {
-  primary: "bg-[#174f78] text-white hover:bg-[#103d5e] dark:bg-[#22678f] dark:hover:bg-[#2c78a3]",
+  primary: "bg-indigo-800 text-white hover:bg-indigo-900 dark:bg-indigo-700 dark:hover:bg-indigo-600",
   secondary: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
   ghost: "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800",
   danger: "bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600",

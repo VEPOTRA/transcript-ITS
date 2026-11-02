@@ -100,7 +100,7 @@ export function GradeUploadForm() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col space-y-6">
       {state.phase !== "done" && (
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -108,9 +108,9 @@ export function GradeUploadForm() {
           onDrop={onDrop}
           onClick={() => state.phase === "idle" && fileInputRef.current?.click()}
           className={[
-            "flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12 text-center transition-colors",
+            "flex min-h-56 flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12 text-center transition-colors",
             state.phase === "idle"
-              ? dragOver ? "cursor-copy border-emerald-400 bg-emerald-50" : "cursor-pointer border-gray-300 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50/40"
+              ? dragOver ? "cursor-copy border-indigo-400 bg-indigo-50" : "cursor-pointer border-gray-300 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50/40"
               : "border-gray-200 bg-gray-50",
           ].join(" ")}
         >
@@ -137,7 +137,7 @@ export function GradeUploadForm() {
             <>
               <p className="text-sm font-medium text-gray-700">Uploading and processing…</p>
               <div className="mt-4 h-2 w-48 overflow-hidden rounded-full bg-gray-200">
-                <div className="h-full rounded-full bg-emerald-600 transition-all duration-200" style={{ width: `${state.progress}%` }} />
+                <div className="h-full rounded-full bg-indigo-800 transition-all duration-200" style={{ width: `${state.progress}%` }} />
               </div>
               <p className="mt-2 text-xs text-gray-500">{state.progress}%</p>
             </>
@@ -148,8 +148,8 @@ export function GradeUploadForm() {
       {(state.phase === "selected" || state.phase === "uploading") && (
         <button
           type="button" onClick={handleUpload} disabled={state.phase === "uploading"}
-          className={["w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
-            state.phase === "uploading" ? "bg-emerald-400" : "bg-emerald-600 hover:bg-emerald-700"].join(" ")}
+          className={["w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+            state.phase === "uploading" ? "bg-indigo-400" : "bg-indigo-800 hover:bg-indigo-900"].join(" ")}
         >
           {state.phase === "uploading" ? "Importing grades…" : "Upload and import grades"}
         </button>

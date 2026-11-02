@@ -315,7 +315,7 @@ export function GradesClient({
                     type="checkbox"
                     name="isResit"
                     value="true"
-                    className="h-4 w-4 rounded border-slate-300 text-[#24496b] focus:ring-[#24496b]"
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-800 focus:ring-indigo-700"
                   />
                   Resit attempt
                 </label>
@@ -533,7 +533,7 @@ export function GradesClient({
                 name="isResit"
                 value="true"
                 defaultChecked={editingGrade.isResit}
-                className="h-4 w-4 rounded border-slate-300 text-[#174f78] focus:ring-[#174f78]"
+                className="h-4 w-4 rounded border-slate-300 text-indigo-800 focus:ring-indigo-700"
               />
               Resit attempt
             </label>

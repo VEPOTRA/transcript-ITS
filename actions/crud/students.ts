@@ -6,6 +6,7 @@ import { z } from "zod";
 import { eq, desc, inArray, ilike, or, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { students, programmes, campuses } from "@/db/schema";
+import { canAccessStudent } from "@/lib/auth/campus";
 import { assertPermission } from "@/lib/auth/rbac";
 import { logAuditEvent, extractRequestMeta } from "@/lib/audit";
 import type { ActionState } from "@/types/auth";
@@ -161,9 +162,6 @@ export async function updateStudentAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await assertPermission("manage_students");
-  if (session.role !== "SUPER_ADMIN") {
-    throw new Error("FORBIDDEN: only Super Admins can update students.");
-  }
 
   const parsed = studentUpdateSchema.safeParse({
     id: str(formData, "id"),
@@ -183,7 +181,7 @@ export async function updateStudentAction(
     graduationYear: str(formData, "graduationYear"),
     email: str(formData, "email"),
     phoneNumber: str(formData, "phoneNumber"),
-    status: str(formData, "status"),
+    status: str(formData, "status") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -199,6 +197,28 @@ export async function updateStudentAction(
     .where(eq(students.id, id))
     .limit(1);
   if (!existing) return { status: "error", error: "Student not found." };
+  if (!canAccessStudent(session, existing.campusId)) {
+    return { status: "error", error: "Student not found." };
+  }
+  if (
+    session.role !== "SUPER_ADMIN" &&
+    fields.status !== undefined
+  ) {
+    return {
+      status: "error",
+      error: "Only Super Admins can change student status.",
+    };
+  }
+  if (
+    session.role !== "SUPER_ADMIN" &&
+    fields.campusId !== undefined &&
+    (!fields.campusId || !session.campusIds.includes(fields.campusId))
+  ) {
+    return {
+      status: "error",
+      error: "You can only assign students to campuses assigned to your account.",
+    };
+  }
 
   try {
     const [updated] = await db

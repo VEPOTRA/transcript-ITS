@@ -10,43 +10,66 @@ export const metadata = { title: "Bulk programme import — TMS" };
 export default async function BulkProgrammesPage() {
     await requirePermission("manage_programmes");
     return (
-        <div className="max-w-2xl space-y-6">
-            <div>
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Bulk programme import</h1>
-                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                    Upload a CSV to register multiple academic programmes at once.
+        <div className="mx-auto w-full max-w-6xl space-y-7">
+            <header className="border-b border-slate-200 pb-6 dark:border-slate-800">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700 dark:text-indigo-300">
+                    Records administration
                 </p>
-            </div>
+                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                    Bulk programme import
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+                    Add academic programmes from a structured CSV. Confirm the
+                    file structure before importing.
+                </p>
+            </header>
 
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 dark:border-indigo-900 dark:bg-indigo-950/20">
-                <h2 className="text-sm font-semibold text-indigo-900 dark:text-indigo-200 mb-3">CSV format</h2>
-                <div className="rounded-lg bg-white/60 dark:bg-black/20 p-3 font-mono text-xs text-indigo-800 dark:text-indigo-300 mb-3">
-                    <p className="font-semibold mb-1">Required columns:</p>
-                    <p>name,code,programme_type (optional), campusId</p>
-                    <p className="mt-2 font-semibold">Example rows:</p>
-                    <p>Bachelor of Science in Computer Science,BSC_CS,DEGREE,KSI</p>
-                    <p>Bachelor of Education in Mathematics,BED_MATH,DEGREE,MAM</p>
-                    <p>Diploma in Information Technology,DIT,DIPLOMA,MAIN</p>
+            <div className="grid items-stretch gap-6 lg:grid-cols-2">
+            <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">Step 1</p>
+                <h2 className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Check the CSV format</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400">
+                    Use the required header row. The optional programme type defaults to DEGREE.
+                </p>
+                <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs leading-5 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <p className="font-semibold text-indigo-800 dark:text-indigo-200">Required columns</p>
+                    <p className="mt-1 break-words">name,code,programme_type</p>
+                    <p className="mt-4 font-semibold text-indigo-800 dark:text-indigo-200">Example row</p>
+                    <p className="mt-1 break-words">Bachelor of Education in Mathematics,BED_MATH,DEGREE</p>
                 </div>
-                <div className="flex items-center gap-4 text-xs">
-                    <span className="text-indigo-700 dark:text-indigo-400">• <strong>name</strong> — full programme title (unique)</span>
-                    <span className="text-indigo-700 dark:text-indigo-400">• <strong>code</strong> — short code (unique)</span>
-                    <span className="text-indigo-700 dark:text-indigo-400">• <strong>programme_type</strong> — DEGREE or DIPLOMA; defaults to DEGREE</span>
-                </div>
+                <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                    <li><strong className="text-slate-800 dark:text-slate-200">name</strong> — unique full programme title.</li>
+                    <li><strong className="text-slate-800 dark:text-slate-200">code</strong> — unique short programme code.</li>
+                    <li><strong className="text-slate-800 dark:text-slate-200">programme_type</strong> — for example, DEGREE or DIPLOMA.</li>
+                </ul>
                 <a href="/api/templates/programmes"
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-400">
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                    Download template CSV
+                    className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-indigo-800 hover:underline dark:text-indigo-300">
+                    <DownloadIcon />
+                    Download programme template
                 </a>
-            </div>
+            </section>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">Step 2</p>
+                <h2 className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Upload programmes</h2>
+                <p className="mb-5 mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400">
+                    Choose the completed CSV and review the import summary.
+                </p>
                 <BulkGenericForm
                     endpoint="/api/bulk/programmes/upload"
                     successHref="/programmes"
                     successLabel="View programmes"
                 />
+            </section>
             </div>
         </div>
+    );
+}
+
+function DownloadIcon() {
+    return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v3h16v-3" />
+        </svg>
     );
 }

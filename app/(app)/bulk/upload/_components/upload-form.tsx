@@ -138,7 +138,7 @@ export function BulkUploadForm() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col space-y-6">
       {/* Drop zone — visible when not done */}
       {state.phase !== "done" && (
         <div
@@ -147,7 +147,7 @@ export function BulkUploadForm() {
           onDrop={onDrop}
           onClick={() => state.phase === "idle" && fileInputRef.current?.click()}
           className={[
-            "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed",
+            "relative flex min-h-56 flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed",
             "px-8 py-12 text-center transition-colors",
             state.phase === "idle"
               ? dragOver

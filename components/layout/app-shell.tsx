@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { logoutAction } from "@/actions/auth";
 import { can, type Permission } from "@/lib/auth/permissions";
@@ -140,7 +141,7 @@ export function AppShell({ session, children, pathname }: Props) {
   const pageLabel = getPageLabel(pathname);
 
   return (
-    <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-screen min-h-screen overflow-hidden border-t-2 border-[#25277b] bg-slate-50 text-slate-900 dark:border-t-[#858bd7] dark:bg-slate-950 dark:text-slate-100">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:shadow-lg"
@@ -170,12 +171,19 @@ export function AppShell({ session, children, pathname }: Props) {
 
         {/* Logo bar */}
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#174f78] text-white shadow-sm">
-            <CapIcon />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-sm ring-1 ring-slate-200">
+            <Image
+              src="/uew-logo.png"
+              alt="University of Education, Winneba"
+              width={40}
+              height={40}
+              priority
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="flex items-baseline gap-1.5">
             <p className="text-sm font-bold leading-none text-slate-900 dark:text-white">TMS</p>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Academic</p>
+            {/* <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Academic</p> */}
           </div>
         </div>
 
@@ -206,17 +214,17 @@ export function AppShell({ session, children, pathname }: Props) {
                           className={[
                             "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                             active
-                              ? "bg-[#eaf2f8] text-[#174f78] dark:bg-sky-950/40 dark:text-sky-200"
+                              ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200"
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white",
                           ].join(" ")}
                         >
                           {/* Active bar */}
                           {active && (
-                            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-[hsl(var(--brand-gold))] dark:bg-amber-300" />
+                            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-[hsl(var(--brand-red))]" />
                           )}
                           <span className={[
                             "h-4 w-4 shrink-0 transition-colors",
-                            active ? "text-[#174f78] dark:text-sky-300" : "",
+                            active ? "text-indigo-800 dark:text-indigo-300" : "",
                           ].join(" ")}>
                             {item.icon}
                           </span>
@@ -264,7 +272,7 @@ export function AppShell({ session, children, pathname }: Props) {
       <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Topbar */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 dark:border-slate-800 dark:bg-slate-900">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 dark:border-slate-800 dark:bg-slate-900">
 
           {/* Left: hamburger + page title */}
           <div className="flex items-center gap-3">
@@ -297,7 +305,7 @@ export function AppShell({ session, children, pathname }: Props) {
                   value={globalSearch}
                   onChange={(event) => setGlobalSearch(event.target.value)}
                   placeholder="Search..."
-                  className="w-44 rounded-full border-0 bg-slate-100 py-2 pl-9 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-[#174f78]/20 dark:bg-slate-800 dark:text-slate-200 sm:w-52"
+                  className="w-44 rounded-full border-0 bg-slate-100 py-2 pl-9 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-700/20 dark:bg-slate-800 dark:text-slate-200 sm:w-52"
                 />
               </form>
             )}
@@ -363,7 +371,7 @@ function Breadcrumb({ pathname }: { pathname: string }) {
             {isLast
               ? <span aria-current="page" className="font-semibold text-slate-900 dark:text-slate-100">{label}</span>
               : <Link href={"/" + segs.slice(0, i + 1).join("/")}
-                className="text-slate-500 transition-colors hover:text-[#174f78] dark:text-slate-400 dark:hover:text-sky-300">
+                className="text-slate-500 transition-colors hover:text-indigo-800 dark:text-slate-400 dark:hover:text-indigo-300">
                 {label}
               </Link>
             }
@@ -375,14 +383,6 @@ function Breadcrumb({ pathname }: { pathname: string }) {
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
-
-function CapIcon() {
-  return (
-    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
-    </svg>
-  );
-}
 
 function DashIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>; }
 function StudentsIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>; }
