@@ -11,6 +11,7 @@
  */
 
 import { requireRole } from "@/lib/auth/rbac";
+import { AdminNavigation } from "./admin-navigation";
 
 export default async function AdminLayout({
   children,
@@ -38,34 +39,9 @@ export default async function AdminLayout({
         </p>
       </div>
 
-      {/* Admin sub-navigation */}
-      <nav aria-label="Administration" className="-mt-2 flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
-        <AdminNavLink href="/admin/users">Users</AdminNavLink>
-        <AdminNavLink href="/admin/institution">Institution</AdminNavLink>
-        <AdminNavLink href="/admin/campuses">Campuses</AdminNavLink>
-        <AdminNavLink href="/admin/grading-scale">Grading scale</AdminNavLink>
-        <AdminNavLink href="/admin/registrar">Registrar</AdminNavLink>
-        <AdminNavLink href="/audit">Audit log</AdminNavLink>
-      </nav>
+      <AdminNavigation />
 
       {children}
     </div>
-  );
-}
-
-function AdminNavLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      href={href}
-      className="-mb-px shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-600 transition-colors hover:border-red-700 hover:text-indigo-950 dark:text-slate-400 dark:hover:text-white"
-    >
-      {children}
-    </a>
   );
 }

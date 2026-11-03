@@ -73,8 +73,8 @@ export type CGPAResult = {
  */
 export type GradeClassification =
   | "First Class"
-  | "Second Class Upper"
-  | "Second Class Lower"
+  | "Second Class Upper Division"
+  | "Second Class Lower Division"
   | "Third Class"
   | "Distinction"
   | "Credit"
