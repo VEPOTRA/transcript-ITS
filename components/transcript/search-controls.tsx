@@ -15,10 +15,10 @@ export function PrintButton() {
         <button
             type="button"
             onClick={() => window.print()}
-            className="print:hidden flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
+            className="print:hidden inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-950 shadow-sm transition-colors hover:border-red-300 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-blue-950/50"
         >
             <PrintIcon />
-            Print / Save as PDF
+            Print Transcript
         </button>
     );
 }

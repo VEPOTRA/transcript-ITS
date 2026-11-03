@@ -28,23 +28,31 @@ export default async function BulkUploadPage() {
     .slice(0, 20); // cap at 20 for display
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto w-full max-w-6xl space-y-7">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Bulk student upload</h1>
-        <p className="mt-1 text-sm text-gray-500">
+      <header className="border-b border-slate-200 pb-6 dark:border-slate-800">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700 dark:text-indigo-300">
+          Records administration
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+          Bulk student import
+        </h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
           Import multiple students from a CSV file. Valid rows are imported
           immediately; failed rows are reported with specific error messages.
           The upload does not stop on partial errors.
         </p>
-      </div>
+      </header>
 
-      {/* Instructions card */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="grid items-stretch gap-6 lg:grid-cols-2">
+      <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-800">Prepare your file</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">
+              Step 1
+            </p>
+            <h2 className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Prepare your CSV</h2>
+            <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400">
               Download the template, fill in your data, and upload the CSV.
             </p>
           </div>
@@ -57,18 +65,18 @@ export default async function BulkUploadPage() {
         </div>
 
         {/* Column reference */}
-        <div className="mt-5 overflow-hidden rounded-lg border border-gray-100">
+        <div className="mt-5 flex-1 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
           <table className="min-w-full text-xs">
-            <thead className="bg-gray-50">
+            <thead className="bg-slate-50 dark:bg-slate-800">
               <tr>
                 {["Column", "Required", "Format / Notes"].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left font-semibold uppercase tracking-wide text-gray-500">
+                  <th key={h} className="px-3 py-2 text-left font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
               {[
                 ["indexNumber", true, "Unique student identifier, e.g. CS/2021/001"],
                 ["firstName", true, "Student's first name"],
@@ -81,13 +89,13 @@ export default async function BulkUploadPage() {
                 ["graduationYear", false, "4-digit year, e.g. 2025 — leave blank for current students"],
               ].map(([col, req, note]) => (
                 <tr key={col as string}>
-                  <td className="px-3 py-2 font-mono font-medium text-gray-800">{col as string}</td>
+                  <td className="px-3 py-2 font-mono font-medium text-slate-800 dark:text-slate-200">{col as string}</td>
                   <td className="px-3 py-2">
-                    <span className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${req ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                    <span className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${req ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>
                       {req ? "Required" : "Optional"}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-gray-500">{note as string}</td>
+                  <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{note as string}</td>
                 </tr>
               ))}
             </tbody>
@@ -95,16 +103,22 @@ export default async function BulkUploadPage() {
         </div>
 
         {/* Limits */}
-        <p className="mt-3 text-xs text-gray-400">
-          Max file size: 5 MB &middot; Max rows per upload: 5,000 &middot; CSV format only
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          Maximum file size: 80 MB · CSV format only
         </p>
       </section>
 
-      {/* Upload form */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold text-gray-800">Upload file</h2>
+      <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">
+          Step 2
+        </p>
+        <h2 className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Upload student records</h2>
+        <p className="mb-5 mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400">
+          Review the import summary before starting another batch.
+        </p>
         <BulkUploadForm />
       </section>
+      </div>
     </div>
   );
 }

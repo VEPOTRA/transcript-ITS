@@ -9,11 +9,12 @@
  */
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LoginForm } from "./_components/login-form";
 
 export const metadata: Metadata = {
-  title: "Sign in — TMS",
+  title: "UEW TMS",
   robots: { index: false, follow: false },
 };
 
@@ -46,21 +47,34 @@ export default async function LoginPage({ searchParams }: Props) {
     <div className="flex min-h-screen">
 
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-indigo-600 p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white" />
-          <div className="absolute -bottom-32 -right-16 h-[500px] w-[500px] rounded-full bg-white" />
-          <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-indigo-800 p-12 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src="/studentcentre.jpg"
+            alt=""
+            fill
+            priority
+            sizes="50vw"
+            className="object-cover opacity-70"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/55 via-indigo-900/35 to-indigo-800/60" />
         </div>
 
         <div className="relative flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-            <CapIcon />
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm">
+            <Image
+              src="/uew-logo.png"
+              alt="University of Education, Winneba"
+              width={100}
+              height={100}
+              priority
+              className="h-full w-full object-contain"
+            />
           </div>
-          <span className="text-lg font-bold text-white">TMS</span>
+          <span className="text-lg font-bold text-white">UEW TMS</span>
         </div>
 
-        <div className="relative space-y-4">
+        {/* <div className="relative space-y-4">
           <h1 className="text-4xl font-bold text-white leading-tight">
             Transcript<br />Management<br />System
           </h1>
@@ -68,7 +82,7 @@ export default async function LoginPage({ searchParams }: Props) {
             Official academic records platform for managing student transcripts, grades, and academic history.
           </p>
           <ul className="space-y-3 pt-4">
-            {["Secure role-based access", "Bulk student & grade uploads", "Official printable transcripts", "Full audit trail"].map((f) => (
+            {["Secure role-based access", "Official printable transcripts"].map((f) => (
               <li key={f} className="flex items-center gap-3 text-indigo-100 text-sm">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
                   <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
@@ -77,17 +91,24 @@ export default async function LoginPage({ searchParams }: Props) {
               </li>
             ))}
           </ul>
-        </div>
+        </div> */}
 
-        <p className="relative text-xs text-indigo-300">Authorised personnel only. All access is logged.</p>
+        {/* <p className="relative text-xs text-indigo-300">Authorised personnel only. All access is logged.</p> */}
       </div>
 
       {/* Right panel */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 bg-white dark:bg-gray-950">
         {/* Mobile logo */}
         <div className="mb-10 flex flex-col items-center lg:hidden">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200">
-            <CapIcon />
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-200">
+            <Image
+              src="/uew-logo.png"
+              alt="University of Education, Winneba"
+              width={56}
+              height={56}
+              priority
+              className="h-full w-full object-contain"
+            />
           </div>
           <p className="mt-3 text-xl font-bold text-gray-900 dark:text-white">TMS</p>
         </div>
@@ -140,13 +161,5 @@ function DatabaseErrorPanel() {
         Retry connection
       </button>
     </div>
-  );
-}
-
-function CapIcon() {
-  return (
-    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
-    </svg>
   );
 }

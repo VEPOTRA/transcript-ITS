@@ -136,10 +136,10 @@ export function passwordResetEmailHTML(opts: {
         <tr>
           <td style="background:#1e3a5f;padding:32px 40px;text-align:center;">
             <p style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:0.05em;">
-              📋 TMS
-            </p>
-            <p style="margin:6px 0 0;font-size:12px;color:#93c5fd;">
               ${institutionName}
+            </p>
+            <p style="margin:6px 0 0;font-size:18px;color:#93c5fd;">
+              Transcript Management System — Password Reset
             </p>
           </td>
         </tr>

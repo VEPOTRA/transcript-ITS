@@ -36,17 +36,17 @@ export function InstitutionClient({ institution }: { institution: Inst }) {
     }
 
     return (
-        <div className="max-w-2xl space-y-6">
+        <div className="mx-auto w-full max-w-5xl space-y-6">
             <div className="flex items-start justify-between">
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Institution settings</h2>
-                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    <h2 className="text-lg font-semibold text-indigo-950 dark:text-white">Institution settings</h2>
+                    <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
                         These details appear on every generated transcript.
                     </p>
                 </div>
                 {!editing && (
                     <button onClick={() => { setEditing(true); setSuccess(false); }}
-                        className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900">
+                        className="rounded-lg bg-indigo-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
                         {institution ? "Edit" : "Add institution"}
                     </button>
                 )}
@@ -66,7 +66,7 @@ export function InstitutionClient({ institution }: { institution: Inst }) {
 
             {/* View mode */}
             {institution && !editing && (
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
                         <Row label="Name" value={institution.name} />
                         <Row label="Address" value={institution.address ?? "Not set"} muted={!institution.address} />
@@ -79,7 +79,7 @@ export function InstitutionClient({ institution }: { institution: Inst }) {
             {/* Edit form */}
             {editing && (
                 <form onSubmit={handleSave}
-                    className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                    className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
 
                     <Field label="Institution name" required>
                         <input value={name} onChange={e => setName(e.target.value)} required
@@ -100,7 +100,7 @@ export function InstitutionClient({ institution }: { institution: Inst }) {
                         {logoPath && (
                             <div className="mt-2 flex items-center gap-3">
                                 <img src={logoPath} alt="Logo preview" className="h-14 w-14 rounded-full border object-contain" onError={e => (e.currentTarget.style.display = "none")} />
-                                <span className="text-xs text-gray-500 dark:text-gray-400">Logo preview</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-400">Logo preview</span>
                             </div>
                         )}
                     </Field>
@@ -113,11 +113,11 @@ export function InstitutionClient({ institution }: { institution: Inst }) {
 
                     <div className="flex gap-3 pt-2">
                         <button type="submit" disabled={isPending}
-                            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">
+                            className="rounded-lg bg-indigo-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
                             {isPending ? "Saving…" : "Save changes"}
                         </button>
                         <button type="button" onClick={() => setEditing(false)}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
+                            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                             Cancel
                         </button>
                     </div>

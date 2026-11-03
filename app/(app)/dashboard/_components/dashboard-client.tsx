@@ -118,14 +118,15 @@ export function DashboardClient({ session, stats, dateLabel }: Props) {
 
 function StatCard({ label, value, sub, href, icon }: { label: string; value: number; sub?: string; href: string; icon: React.ReactNode }) {
   return (
-    <Link href={href} className="group flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 hover:bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-900/70">
-      <div className="flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#eaf2f8] text-[#174f78] dark:bg-sky-950/40 dark:text-sky-200"><span className="h-5 w-5">{icon}</span></div>
-        <svg className="h-4 w-4 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-400 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-      </div>
-      <div>
-        <p className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-100">{value.toLocaleString()}</p>
+    <Link href={href} className="group flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:border-slate-300 hover:bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-900/70">
+      <div className="flex items-center gap-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200"><span className="h-5 w-5">{icon}</span></div>
+       <div>
+        <p className="text-xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-100">{value.toLocaleString()}</p>
         <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>
+       </div>
+      </div>
+      <div className="text-right">
         {sub && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{sub}</p>}
       </div>
     </Link>
@@ -135,7 +136,7 @@ function StatCard({ label, value, sub, href, icon }: { label: string; value: num
 function QuickCard({ href, title, description, icon }: { href: string; title: string; description: string; icon: React.ReactNode }) {
   return (
     <Link href={href} className="group flex items-start gap-4 rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 hover:bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#eaf2f8] text-[#174f78] dark:bg-sky-950/40 dark:text-sky-200"><span className="h-5 w-5">{icon}</span></div>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200"><span className="h-5 w-5">{icon}</span></div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</p>
         <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{description}</p>

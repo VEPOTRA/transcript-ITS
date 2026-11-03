@@ -70,17 +70,17 @@ export function RegistrarClient({ records: initial }: Props) {
   const activeRegistrar = records.find(r => r.isActive);
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Registrar</h2>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+          <h2 className="text-lg font-semibold text-indigo-950 dark:text-white">Registrar</h2>
+          <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
             The active registrar's name and signature appear on every transcript.
           </p>
         </div>
         {!editing && (
           <button onClick={openNew}
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900">
+            className="rounded-lg bg-indigo-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
             Add registrar
           </button>
         )}
@@ -107,12 +107,12 @@ export function RegistrarClient({ records: initial }: Props) {
 
       {/* Registrar list */}
       {records.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           {records.map((r, i) => (
-            <div key={r.id} className={`flex items-center gap-4 px-5 py-4 ${i > 0 ? "border-t border-gray-100 dark:border-gray-800" : ""}`}>
+            <div key={r.id} className={`flex items-center gap-4 px-5 py-4 ${i > 0 ? "border-t border-slate-100 dark:border-slate-800" : ""}`}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.name}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{r.name}</p>
                   {r.isActive && (
                     <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Active</span>
                   )}
@@ -124,7 +124,7 @@ export function RegistrarClient({ records: initial }: Props) {
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => openEdit(r)}
-                  className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium text-indigo-900 hover:bg-indigo-50 dark:border-slate-700 dark:text-indigo-300 dark:hover:bg-indigo-950/40">
                   Edit
                 </button>
                 <button onClick={() => handleToggle(r)}
@@ -140,7 +140,7 @@ export function RegistrarClient({ records: initial }: Props) {
       {/* Edit / Create form */}
       {editing && (
         <form onSubmit={handleSave}
-          className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {editing === "new" ? "Add registrar" : "Edit registrar"}
           </h3>
@@ -170,11 +170,11 @@ export function RegistrarClient({ records: initial }: Props) {
 
           <div className="flex gap-3 pt-1">
             <button type="submit" disabled={saving}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">
+              className="rounded-lg bg-indigo-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
               {saving ? "Saving…" : "Save"}
             </button>
             <button type="button" onClick={() => setEditing(null)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
               Cancel
             </button>
           </div>

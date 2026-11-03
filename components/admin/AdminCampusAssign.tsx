@@ -51,31 +51,31 @@ export function AdminCampusAssign({
     return (
         <div className="space-y-4">
             <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <p className="text-sm font-medium text-indigo-950 dark:text-slate-100">
                     Campus access for <span className="font-semibold">{adminName}</span>
                 </p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                     Select the campuses this account can access. Super Admins always have access to every campus.
                 </p>
             </div>
 
             {/* Campuses checklist */}
-            <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/40">
                 {allCampuses.length === 0 ? (
                     <p className="px-2 py-3 text-sm text-gray-500 dark:text-gray-400">
                         No campuses are available to assign.
                     </p>
                 ) : allCampuses.map(campus => (
                     <label key={campus.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white dark:hover:bg-gray-800 transition-colors">
+                        className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/50">
                         <input
                             type="checkbox"
                             checked={selected.has(campus.id)}
                             onChange={() => toggle(campus.id)}
-                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-900 focus:ring-indigo-700"
                         />
-                        <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">{campus.name}</span>
-                        <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        <span className="flex-1 text-sm text-slate-800 dark:text-slate-200">{campus.name}</span>
+                        <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                             {campus.code}
                         </code>
                     </label>
@@ -108,7 +108,7 @@ export function AdminCampusAssign({
                 type="button"
                 onClick={handleSave}
                 disabled={isPending || allCampuses.length === 0}
-                className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+                className="w-full rounded-xl bg-indigo-900 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
                 {isPending ? "Saving…" : "Save campus access"}
             </button>
         </div>

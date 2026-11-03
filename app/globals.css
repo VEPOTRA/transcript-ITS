@@ -5,9 +5,9 @@
 /* ─── Design tokens ────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --accent: 202 68% 28%;
-    --accent-light: 204 44% 95%;
-    --brand-gold: 43 74% 49%;
+    --accent: 238 56% 31%;
+    --accent-light: 238 60% 96%;
+    --brand-red: 356 88% 52%;
     --radius: 0.625rem;
     --surface: 0 0% 100%;
     --canvas: 210 20% 98%;
@@ -24,7 +24,10 @@
 
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
-    font-feature-settings: "ss01" on, "cv11" on;
+    font-feature-settings:
+      "ss01" on,
+      "cv11" on;
+    font-family: "Poppins", sans-serif;
   }
 }
 

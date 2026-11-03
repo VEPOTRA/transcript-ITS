@@ -1,5 +1,19 @@
 import type { Config } from "tailwindcss";
 
+const uewNavy = {
+  50: "#f2f3fc",
+  100: "#e5e7f8",
+  200: "#cfd2f1",
+  300: "#aeb3e6",
+  400: "#858bd7",
+  500: "#555bb5",
+  600: "#292b7c",
+  700: "#23256c",
+  800: "#1c1e5b",
+  900: "#17194c",
+  950: "#0f1030",
+};
+
 const config: Config = {
   // ─── Dark mode ────────────────────────────────────────────────────────────
   //
@@ -16,6 +30,12 @@ const config: Config = {
 
   theme: {
     extend: {
+      colors: {
+        indigo: uewNavy,
+        blue: uewNavy,
+        sky: uewNavy,
+        violet: uewNavy,
+      },
       // ─── Animations ───────────────────────────────────────────────────────
       keyframes: {
         "slide-in": {

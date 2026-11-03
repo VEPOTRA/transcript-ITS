@@ -110,7 +110,7 @@ export function BulkGenericForm({
         const visible = showAll ? phase.errors : phase.errors.slice(0, 5);
 
         return (
-            <div className="space-y-5">
+            <div className="flex flex-1 flex-col space-y-5">
                 <div className={[
                     "flex items-start gap-3 rounded-2xl border px-5 py-4",
                     allOk ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20"
@@ -197,14 +197,14 @@ export function BulkGenericForm({
 
     /* ── Upload / idle / selected state ─────────────────────────────────────── */
     return (
-        <div className="space-y-4">
+        <div className="flex flex-1 flex-col space-y-4">
             <div
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => phase.name === "idle" && inputRef.current?.click()}
                 className={[
-                    "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-8 py-12 text-center transition-all",
+                    "flex min-h-56 flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed px-8 py-12 text-center transition-all",
                     phase.name === "idle"
                         ? dragOver
                             ? "cursor-copy border-indigo-400 bg-indigo-50 dark:bg-indigo-950/20"

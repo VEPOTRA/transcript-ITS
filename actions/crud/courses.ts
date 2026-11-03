@@ -16,6 +16,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { courses, grades } from "@/db/schema";
+import { COURSE_CATEGORIES } from "@/lib/courses/categories";
 import { assertPermission } from "@/lib/auth/rbac";
 import { logAuditEvent, extractRequestMeta } from "@/lib/audit";
 import { parseDbError, dbErrorMessage, withAction } from "@/lib/actions/utils";
@@ -35,6 +36,7 @@ const courseSchema = z.object({
     .trim()
     .min(3, "Title must be at least 3 characters")
     .max(255, "Title must be at most 255 characters"),
+  category: z.enum(COURSE_CATEGORIES).default("OSIS_NEW"),
   creditHours: z.coerce
     .number({ invalid_type_error: "Credit hours must be a number" })
     .int("Credit hours must be a whole number")
@@ -66,6 +68,7 @@ export async function createCourseAction(
     const parsed = courseSchema.safeParse({
       code: formData.get("code"),
       title: formData.get("title"),
+      category: formData.get("category") || undefined,
       creditHours: formData.get("creditHours"),
       isScoring: formData.get("isScoring"),
     });
@@ -132,6 +135,7 @@ export async function updateCourseAction(
       id: formData.get("id"),
       code: formData.get("code"),
       title: formData.get("title"),
+      category: formData.get("category") || undefined,
       creditHours: formData.get("creditHours"),
       isScoring: formData.get("isScoring"),
     });

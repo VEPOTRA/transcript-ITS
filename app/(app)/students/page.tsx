@@ -42,7 +42,8 @@ export default async function StudentsPage({
       campuses={campuses}
       initialQuery={query}
       canCreateStudents={can(session, "manage_students")}
-      canEditStudents={session.role === "SUPER_ADMIN"}
+      canEditStudents={can(session, "manage_students")}
+      canDeleteStudents={session.role === "SUPER_ADMIN"}
     />
   );
 }

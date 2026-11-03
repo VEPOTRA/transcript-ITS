@@ -45,6 +45,7 @@ type Props = {
   initialQuery?: string;
   canCreateStudents: boolean;
   canEditStudents: boolean;
+  canDeleteStudents: boolean;
 };
 
 const STATUS_BADGE: Record<string, "green" | "gray" | "red"> = {
@@ -76,6 +77,7 @@ export function StudentsClient({
   initialQuery = "",
   canCreateStudents,
   canEditStudents,
+  canDeleteStudents,
 }: Props) {
   const toast = useToast();
   const router = useRouter();
@@ -226,7 +228,7 @@ export function StudentsClient({
       {paginated.length > 0 && (
         <div className="space-y-3">
           {paginated.map(s => (
-            <StudentCard key={s.id} student={s} canEdit={canEditStudents}
+            <StudentCard key={s.id} student={s} canEdit={canEditStudents} canDelete={canDeleteStudents}
               onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} />
           ))}
           <Pagination page={page} perPage={perPage} total={total} totalPages={totalPages}
@@ -348,7 +350,7 @@ export function StudentsClient({
             </Field>
             <Field label="Campus">
               <Select name="campusId" defaultValue={editing.campusId ?? ""}>
-                <option value="">— No campus —</option>
+                {canDeleteStudents && <option value="">— No campus —</option>}
                 {campuses.map(c => (
                   <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
                 ))}
@@ -393,18 +395,20 @@ export function StudentsClient({
             <Field label="Phone number">
               <Input name="phoneNumber" defaultValue={editing.phoneNumber ?? ""} />
             </Field>
-            <Field label="Status">
-              <Select name="status" defaultValue={editing.status}>
-                <option value="ACTIVE">Active</option>
-                <option value="GRADUATED">Graduated</option>
-                <option value="WITHDRAWN">Withdrawn</option>
-              </Select>
-            </Field>
+            {canDeleteStudents && (
+              <Field label="Status">
+                <Select name="status" defaultValue={editing.status}>
+                  <option value="ACTIVE">Active</option>
+                  <option value="GRADUATED">Graduated</option>
+                  <option value="WITHDRAWN">Withdrawn</option>
+                </Select>
+              </Field>
+            )}
           </form>
         )}
       </Modal>}
 
-      {canEditStudents && <ConfirmDialog
+      {canDeleteStudents && <ConfirmDialog
         open={!!deleting} onClose={() => setDeleting(null)} onConfirm={handleDelete}
         title="Delete student"
         message={`Delete ${deleting?.firstName} ${deleting?.lastName} (${deleting?.indexNumber})? Their grade records will also be removed. This cannot be undone.`}
@@ -419,11 +423,13 @@ export function StudentsClient({
 function StudentCard({
   student,
   canEdit,
+  canDelete,
   onEdit,
   onDelete,
 }: {
   student: Student;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -455,12 +461,14 @@ function StudentCard({
           <span className="text-xs text-gray-400">Level {student.level} · {student.entryYear}</span>
         </div>
       </div>
-      {canEdit && (
+      {(canEdit || canDelete) && (
         <div className="ml-4 flex shrink-0 items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={onEdit}>Edit</Button>
-          <Button size="sm" variant="ghost" onClick={onDelete} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
-            Delete
-          </Button>
+          {canEdit && <Button size="sm" variant="ghost" onClick={onEdit}>Edit bio</Button>}
+          {canDelete && (
+            <Button size="sm" variant="ghost" onClick={onDelete} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
+              Delete
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -1,13 +1,5 @@
 "use client";
 
-const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  OSIS_OLD: { label: "OSIS Old", color: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" },
-  OSIS_NEW: { label: "OSIS New", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" },
-  ITS: { label: "ITS", color: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300" },
-  OSIS_2: { label: "OSIS 2", color: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" },
-};
-
-
 import { useOptimistic, useState, useTransition } from "react";
 import {
   createCourseAction, updateCourseAction,
@@ -21,6 +13,11 @@ import {
   useToast,
 } from "@/components/ui";
 import { Pagination, usePagination } from "@/components/ui/pagination";
+import {
+  COURSE_CATEGORIES,
+  COURSE_CATEGORY_LABELS,
+  type CourseCategory,
+} from "@/lib/courses/categories";
 
 const IDLE = { status: "idle" } as const;
 
@@ -29,6 +26,7 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
   const [courses, setOptimistic] = useOptimistic(initial);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
+  const [categoryFilter, setCategoryFilter] = useState<CourseCategory | "all">("all");
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Course | null>(null);
   const [deleting, setDeleting] = useState<Course | null>(null);
@@ -38,9 +36,12 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
   // Reset page when search/filter changes handled in onPage/onPerPage
   const filtered = courses.filter((c) => {
     const q = search.toLowerCase();
-    const matchSearch = c.code.toLowerCase().includes(q) || c.title.toLowerCase().includes(q);
+    const matchSearch = c.code.toLowerCase().includes(q)
+      || c.title.toLowerCase().includes(q)
+      || COURSE_CATEGORY_LABELS[c.category].toLowerCase().includes(q);
     const matchFilter = filter === "all" || (filter === "active" ? c.isActive : !c.isActive);
-    return matchSearch && matchFilter;
+    const matchCategory = categoryFilter === "all" || c.category === categoryFilter;
+    return matchSearch && matchFilter && matchCategory;
   });
 
   const { page, perPage, total, totalPages, paginated, setPage, setPerPage } =
@@ -101,7 +102,7 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1 max-w-xs">
-          <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search code or title…" />
+          <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search code, title or category…" />
         </div>
         <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {(["all", "active", "inactive"] as const).map((f) => (
@@ -119,12 +120,27 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
             </button>
           ))}
         </div>
+        <Select
+          aria-label="Filter by course category"
+          value={categoryFilter}
+          onChange={(event) => {
+            setCategoryFilter(event.target.value as CourseCategory | "all");
+            setPage(1);
+          }}
+        >
+          <option value="all">All categories</option>
+          {COURSE_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {COURSE_CATEGORY_LABELS[category]}
+            </option>
+          ))}
+        </Select>
       </div>
 
       {filtered.length === 0 ? (
         <EmptyState
-          title={search || filter !== "all" ? "No matching courses" : "No courses yet"}
-          action={!search && filter === "all" && (
+          title={search || filter !== "all" || categoryFilter !== "all" ? "No matching courses" : "No courses yet"}
+          action={!search && filter === "all" && categoryFilter === "all" && (
             <Button variant="primary" onClick={() => setShowCreate(true)}>Create course</Button>
           )}
         />
@@ -135,6 +151,7 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
               <tr>
                 <Th>Code</Th>
                 <Th>Title</Th>
+                <Th>Category</Th>
                 <Th>Cr. hrs</Th>
                 <Th>Scoring</Th>
                 <Th>Status</Th>
@@ -146,6 +163,11 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
                 <Tr key={c.id}>
                   <Td><code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">{c.code}</code></Td>
                   <Td className="font-medium text-gray-900 dark:text-gray-100 max-w-xs truncate">{c.title}</Td>
+                  <Td>
+                    <span className="inline-flex whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-900 ring-1 ring-inset ring-indigo-200 dark:bg-indigo-950 dark:text-indigo-200 dark:ring-indigo-800">
+                      {COURSE_CATEGORY_LABELS[c.category]}
+                    </span>
+                  </Td>
                   <Td className="tabular-nums font-medium">{c.creditHours}</Td>
                   <Td>
                     <button onClick={() => handleToggle(c, "scoring")}>
@@ -197,6 +219,15 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
           <Field label="Course title" required>
             <Input name="title" placeholder="Introduction to Mathematics" required />
           </Field>
+          <Field label="Course category" required>
+            <Select name="category" defaultValue="OSIS_NEW" required>
+              {COURSE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {COURSE_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label="Credit hours" required hint="e.g. 2, 3, 6, 18, 24">
             <Input name="creditHours" type="number" min={1} defaultValue={3} required />
           </Field>
@@ -226,13 +257,13 @@ export function CoursesClient({ initial }: { initial: Course[] }) {
               <Input name="title" defaultValue={editing.title} required />
             </Field>
             <Field label="Course category" required>
-              <select name="category" defaultValue={editing.category ?? "OSIS_NEW"}
-                className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-                <option value="OSIS_NEW">OSIS New Courses</option>
-                <option value="OSIS_OLD">OSIS Old Courses</option>
-                <option value="ITS">ITS Courses</option>
-                <option value="OSIS_2">OSIS 2 Courses</option>
-              </select>
+              <Select name="category" defaultValue={editing.category ?? "OSIS_NEW"} required>
+                {COURSE_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {COURSE_CATEGORY_LABELS[category]}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Credit hours" required
               hint="Changing this affects future grade entries only. Existing grades retain their snapshot.">

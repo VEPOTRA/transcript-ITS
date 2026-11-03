@@ -95,11 +95,11 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   if (loading) return <div className="py-10 text-center text-sm text-gray-500">Loading…</div>;
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       <div>
-        <a href="/admin/users" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">← Back to admin users</a>
-        <h1 className="mt-3 text-xl font-semibold text-gray-900 dark:text-gray-100">Manage admin account</h1>
-        {admin && <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{admin.email}</p>}
+        <a href="/admin/users" className="text-sm font-medium text-indigo-800 hover:text-red-800 dark:text-indigo-300 dark:hover:text-red-300">← Back to admin users</a>
+        <h1 className="mt-3 text-xl font-semibold tracking-tight text-indigo-950 dark:text-white">Manage admin account</h1>
+        {admin && <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{admin.email}</p>}
       </div>
 
       {!admin && error && (
@@ -122,13 +122,14 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
           {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
 
           {/* Edit form */}
-          <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Account settings</h2>
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-sm font-semibold text-indigo-950 dark:text-slate-100">Account settings</h2>
 
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+              <label className="block text-sm font-medium text-slate-800 dark:text-slate-200">Role</label>
               <select value={role} onChange={e => setRole(e.target.value as typeof role)}
-                className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-900">
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-800/20">
                 <option value="SUPER_ADMIN">SUPER ADMIN — full access</option>
                 <option value="ADMIN">ADMIN — manage students, grades, transcripts</option>
                 <option value="VIEWER">VIEWER — read-only access</option>
@@ -137,27 +138,27 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
             {!showPasswordField ? (
               <button type="button" onClick={() => setShowPasswordField(true)}
-                className="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                className="text-sm font-medium text-indigo-800 hover:text-red-800 hover:underline dark:text-indigo-300 dark:hover:text-red-300">
                 Reset password
               </button>
             ) : (
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New password</label>
+                <label className="block text-sm font-medium text-slate-800 dark:text-slate-200">New password</label>
                 <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-900" />
+                  className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-800/20" />
                 <button type="button" onClick={() => { setShowPasswordField(false); setNewPassword(""); }}
                   className="text-xs text-gray-500 hover:underline dark:text-gray-400">Cancel password reset</button>
               </div>
             )}
 
             <button type="button" onClick={handleSave} disabled={saving}
-              className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">
+              className="w-full rounded-lg bg-indigo-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
               {saving ? "Saving…" : "Save changes"}
             </button>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
             <AdminCampusAssign
               adminId={admin.id}
               adminName={admin.email}
@@ -167,11 +168,12 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
               onDone={() => router.refresh()}
             />
           </div>
+          </div>
 
           {/* Enable / Disable */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
-            <h2 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Account status</h2>
-            <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="mb-1 text-sm font-semibold text-indigo-950 dark:text-slate-100">Account status</h2>
+            <p className="mb-4 text-xs text-slate-600 dark:text-slate-400">
               {admin.isActive
                 ? "Disabling this account prevents the user from logging in. Their data and audit history are preserved."
                 : "This account is currently disabled. Re-enable to allow the user to log in again."}
