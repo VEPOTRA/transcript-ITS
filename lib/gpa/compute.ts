@@ -134,8 +134,8 @@ export function classifyGPA(
 
   // Degree classification scale (default)
   if (cgpa >= 3.5) return "First Class";
-  if (cgpa >= 3.0) return "Second Class Upper";
-  if (cgpa >= 2.5) return "Second Class Lower";
+  if (cgpa >= 3.0) return "Second Class Upper Division";
+  if (cgpa >= 2.5) return "Second Class Lower Division";
   if (cgpa >= 2.0) return "Third Class";
   if (cgpa >= 1.0) return "Pass";
   return "Fail";

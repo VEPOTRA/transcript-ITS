@@ -1,6 +1,6 @@
 /**
  * POST /api/bulk/courses/upload
- * CSV columns: code, title, credit_hours, is_scoring (optional)
+ * CSV columns: code, title, credit_hours; is_scoring and category are optional
  */
 
 import { type NextRequest, NextResponse } from "next/server";
@@ -9,6 +9,7 @@ import { COOKIE_NAME } from "@/lib/auth/config";
 import { can } from "@/lib/auth/permissions";
 import { db } from "@/db";
 import { courses } from "@/db/schema";
+import { COURSE_CATEGORIES } from "@/lib/courses/categories";
 import { z } from "zod";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -24,9 +25,7 @@ const rowSchema = z.object({
     .int("credit_hours must be a whole number — no decimals")
     .min(1, "credit_hours must be at least 1"),
   isScoring: z.string().transform((v) => v.toLowerCase() !== "false"),
-  category: z
-    .enum(["OSIS_OLD", "OSIS_NEW", "ITS", "OSIS_2"])
-    .default("OSIS_NEW"),
+  category: z.enum(COURSE_CATEGORIES).default("OSIS_NEW"),
 });
 
 function friendlyColError(field: string, raw: string, msg: string): string {
@@ -35,6 +34,7 @@ function friendlyColError(field: string, raw: string, msg: string): string {
     title: "title column",
     creditHours: "credit_hours column",
     isScoring: "is_scoring column",
+    category: "category column",
   };
   return `${labels[field] ?? field} "${raw || "(empty)"}" — ${msg}`;
 }
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     title: string;
     creditHours: number;
     isScoring: boolean;
-    category: "OSIS_OLD" | "OSIS_NEW" | "ITS" | "OSIS_2";
+    category: (typeof COURSE_CATEGORIES)[number];
     rowNum: number;
   };
   type FailedRow = { row: number; message: string };
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const rawCredits = cols[creditIdx] ?? "";
     const rawScoring = scoringIdx >= 0 ? (cols[scoringIdx] ?? "true") : "true";
     const rawCategory =
-      categoryIdx >= 0 ? (cols[categoryIdx] ?? "OSIS_NEW") : "OSIS_NEW";
+      categoryIdx >= 0 ? cols[categoryIdx]?.trim() || "OSIS_NEW" : "OSIS_NEW";
 
     if (!rawCode && !rawTitle) continue; // blank row
 

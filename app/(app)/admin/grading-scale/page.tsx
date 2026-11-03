@@ -44,10 +44,10 @@ export default function GradingScalePage() {
   const [col2, setCol2] = useState(6);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Grading scale</h2>
-        <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+        <h2 className="text-lg font-semibold text-indigo-950 dark:text-white">Grading scale</h2>
+        <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
           The grade-to-grade-point mapping used to compute quality points and GPA.
           Use the credit hour selectors below the table header to preview quality
           points for any credit value used in your institution.
@@ -55,14 +55,14 @@ export default function GradingScalePage() {
       </div>
 
       {/* Credit hour selectors */}
-      <div className="flex flex-wrap items-center gap-6 rounded-lg border border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex flex-wrap items-center gap-6 rounded-lg border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Preview credit hours:</p>
 
         <CreditHourPicker label="Column A" value={col1} onChange={setCol1} presets={PRESETS} />
         <CreditHourPicker label="Column B" value={col2} onChange={setCol2} presets={PRESETS} />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-800/50">
             <tr>
@@ -97,14 +97,14 @@ export default function GradingScalePage() {
       </div>
 
       {/* Formula explainer */}
-      <div className="rounded-lg border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+      <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-5 text-sm text-indigo-950 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
         <p className="font-medium mb-2">How GPA is computed</p>
         <div className="space-y-1 font-mono text-xs">
           <p>quality_points = grade_point × credit_hours  (stored at write time)</p>
           <p>SGPA = Σ(quality_points) / Σ(credit_hours)   per semester</p>
           <p>CGPA = Σ(all quality_points) / Σ(all credit_hours)</p>
         </div>
-        <p className="mt-3 text-xs text-blue-700 dark:text-blue-400">
+        <p className="mt-3 text-xs text-indigo-800 dark:text-indigo-300">
           Non-scoring courses are excluded from all GPA calculations.
           F grades contribute 0 quality points but are counted in credits attempted.
           Credit hours are snapshotted from the course at the time of grade entry —
@@ -134,7 +134,7 @@ function CreditHourPicker({
             className={[
               "rounded px-2 py-0.5 text-xs font-medium transition-colors",
               value === p
-                ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                ? "bg-indigo-900 text-white dark:bg-indigo-200 dark:text-indigo-950"
                 : "border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800",
             ].join(" ")}
           >

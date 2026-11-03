@@ -14,7 +14,7 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "./_components/login-form";
 
 export const metadata: Metadata = {
-  title: "Sign in — TMS",
+  title: "UEW TMS",
   robots: { index: false, follow: false },
 };
 
@@ -48,10 +48,16 @@ export default async function LoginPage({ searchParams }: Props) {
 
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-indigo-800 p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white" />
-          <div className="absolute -bottom-32 -right-16 h-[500px] w-[500px] rounded-full bg-white" />
-          <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+        <div className="absolute inset-0">
+          <Image
+            src="/studentcentre.jpg"
+            alt=""
+            fill
+            priority
+            sizes="50vw"
+            className="object-cover opacity-70"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/55 via-indigo-900/35 to-indigo-800/60" />
         </div>
 
         <div className="relative flex items-center gap-3">
@@ -59,16 +65,16 @@ export default async function LoginPage({ searchParams }: Props) {
             <Image
               src="/uew-logo.png"
               alt="University of Education, Winneba"
-              width={48}
-              height={48}
+              width={100}
+              height={100}
               priority
               className="h-full w-full object-contain"
             />
           </div>
-          <span className="text-lg font-bold text-white">TMS</span>
+          <span className="text-lg font-bold text-white">UEW TMS</span>
         </div>
 
-        <div className="relative space-y-4">
+        {/* <div className="relative space-y-4">
           <h1 className="text-4xl font-bold text-white leading-tight">
             Transcript<br />Management<br />System
           </h1>
@@ -76,7 +82,7 @@ export default async function LoginPage({ searchParams }: Props) {
             Official academic records platform for managing student transcripts, grades, and academic history.
           </p>
           <ul className="space-y-3 pt-4">
-            {["Secure role-based access", "Bulk student & grade uploads", "Official printable transcripts", "Full audit trail"].map((f) => (
+            {["Secure role-based access", "Official printable transcripts"].map((f) => (
               <li key={f} className="flex items-center gap-3 text-indigo-100 text-sm">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
                   <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
@@ -85,9 +91,9 @@ export default async function LoginPage({ searchParams }: Props) {
               </li>
             ))}
           </ul>
-        </div>
+        </div> */}
 
-        <p className="relative text-xs text-indigo-300">Authorised personnel only. All access is logged.</p>
+        {/* <p className="relative text-xs text-indigo-300">Authorised personnel only. All access is logged.</p> */}
       </div>
 
       {/* Right panel */}

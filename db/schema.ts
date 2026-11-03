@@ -15,6 +15,7 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { COURSE_CATEGORIES } from "../lib/courses/categories";
 
 export const importRunStatusEnum = pgEnum("import_run_status", [
   "PENDING",
@@ -88,17 +89,7 @@ export const uploadJobStatusEnum = pgEnum("upload_job_status", [
   "FAILED",
 ]);
 
-export const courseCategoryEnum = pgEnum("course_category", [
-  "OSIS_OLD",
-  "OSIS_ONE",
-  "OSIS_ITC",
-  "OSIS_SRO",
-  "OSIS_MAIN",
-  "OSIS_EVAL",
-  "OSIS_NEW",
-  "ITS",
-  "OSIS_2",
-]);
+export const courseCategoryEnum = pgEnum("course_category", COURSE_CATEGORIES);
 
 export const importRuns = pgTable(
   "import_runs",
@@ -384,7 +375,7 @@ export const courses = pgTable(
   "courses",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    sourceCourseId: integer("source_course_id").notNull(),
+    sourceCourseId: integer("source_course_id"),
     code: varchar("code", { length: 50 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
     category: courseCategoryEnum("category").default("OSIS_NEW").notNull(),
