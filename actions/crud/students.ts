@@ -5,7 +5,13 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { eq, desc, inArray, ilike, or, and, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { students, programmes, campuses } from "@/db/schema";
+import {
+  students,
+  programmes,
+  campuses,
+  studentStatusEnum,
+  studentTypeEnum,
+} from "@/db/schema";
 import { canAccessStudent } from "@/lib/auth/campus";
 import { assertPermission } from "@/lib/auth/rbac";
 import { logAuditEvent, extractRequestMeta } from "@/lib/audit";
@@ -398,14 +404,77 @@ export async function getStudents(campusIds?: string[] | null) {
 }
 
 /**
- * Search students by index number, name, or programme name.
+ * Search students by broad text or specific student bio fields.
  * Called only when the user submits a search — never on page load.
  */
+export type StudentSearchFilters = {
+  indexNumber?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  programmeId?: string;
+  campusId?: string;
+  level?: number;
+  entryYear?: string;
+  graduationYear?: string;
+  dateOfBirth?: string;
+  studentType?: (typeof studentTypeEnum.enumValues)[number];
+  status?: (typeof studentStatusEnum.enumValues)[number];
+  gender?: string;
+};
+
 export async function searchStudents(
   query: string,
   campusIds: string[] | null,
+  filters: StudentSearchFilters = {},
 ) {
-  const q = `%${query.trim().toLowerCase()}%`;
+  const conditions = [];
+  const q = query.trim();
+  if (q) {
+    const pattern = `%${q}%`;
+    conditions.push(or(
+      ilike(students.indexNumber, pattern),
+      ilike(sql`concat_ws(' ', ${students.firstName}, ${students.middleName}, ${students.lastName})`, pattern),
+      ilike(programmes.name, pattern),
+    )!);
+  }
+  if (filters.indexNumber) {
+    conditions.push(ilike(students.indexNumber, `%${filters.indexNumber.trim()}%`));
+  }
+  if (filters.firstName) conditions.push(ilike(students.firstName, `%${filters.firstName.trim()}%`));
+  if (filters.middleName) conditions.push(ilike(students.middleName, `%${filters.middleName.trim()}%`));
+  if (filters.lastName) conditions.push(ilike(students.lastName, `%${filters.lastName.trim()}%`));
+  if (filters.email) conditions.push(ilike(students.email, `%${filters.email.trim()}%`));
+  if (filters.phoneNumber) {
+    conditions.push(ilike(students.phoneNumber, `%${filters.phoneNumber.trim()}%`));
+  }
+  if (filters.programmeId) conditions.push(eq(students.programmeId, filters.programmeId));
+  if (filters.campusId) conditions.push(eq(students.campusId, filters.campusId));
+  if (filters.level !== undefined) conditions.push(eq(students.level, filters.level));
+  if (filters.entryYear) conditions.push(ilike(students.entryYear, `%${filters.entryYear.trim()}%`));
+  if (filters.graduationYear) {
+    conditions.push(ilike(students.graduationYear, `%${filters.graduationYear.trim()}%`));
+  }
+  if (filters.dateOfBirth) conditions.push(eq(students.dateOfBirth, filters.dateOfBirth));
+  if (filters.studentType) conditions.push(eq(students.studentType, filters.studentType));
+  if (filters.status) conditions.push(eq(students.status, filters.status));
+  if (filters.gender) {
+    const storedGender =
+      filters.gender === "MALE" ? "M"
+        : filters.gender === "FEMALE" ? "F"
+          : filters.gender === "OTHER" ? "O"
+            : filters.gender;
+    conditions.push(or(
+      ilike(students.gender, filters.gender),
+      ilike(students.gender, storedGender),
+    )!);
+  }
+  if (campusIds !== null) {
+    if (campusIds.length === 0) return [];
+    conditions.push(inArray(students.campusId, campusIds));
+  }
 
   const base = db
     .select({
@@ -433,22 +502,11 @@ export async function searchStudents(
     .leftJoin(programmes, eq(students.programmeId, programmes.id))
     .leftJoin(campuses, eq(students.campusId, campuses.id));
 
-  const searchCondition = or(
-    ilike(students.indexNumber, q),
-    ilike(students.firstName, q),
-    ilike(students.lastName, q),
-    ilike(sql`COALESCE(${students.middleName}, '')`, q),
-  );
-
-  if (campusIds && campusIds.length === 0) return [];
-  if (campusIds !== null) {
-    return base
-      .where(and(searchCondition, inArray(students.campusId, campusIds)))
-      .orderBy(students.indexNumber)
-      .limit(100);
-  }
-
-  return base.where(searchCondition).orderBy(students.indexNumber).limit(100);
+  if (conditions.length === 0) return [];
+  return base
+    .where(and(...conditions))
+    .orderBy(students.indexNumber)
+    .limit(100);
 }
 
 export async function getStudentById(

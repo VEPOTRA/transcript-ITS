@@ -137,11 +137,16 @@ type ModalProps = {
   title: string;
   children: React.ReactNode;
   /** default md */
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   footer?: React.ReactNode;
 };
 
-const MODAL_SIZES = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" };
+const MODAL_SIZES = {
+  sm: "max-w-sm",
+  md: "max-w-lg",
+  lg: "max-w-2xl",
+  xl: "max-w-4xl",
+};
 
 export function Modal({ open, onClose, title, children, size = "md", footer }: ModalProps) {
   useEffect(() => {
@@ -161,23 +166,24 @@ export function Modal({ open, onClose, title, children, size = "md", footer }: M
         onClick={onClose}
       />
       {/* Panel */}
-      <div className={`relative w-full ${MODAL_SIZES[size]} rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900`}>
+      <div className={`relative flex max-h-[calc(100dvh-2rem)] w-full ${MODAL_SIZES[size]} flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900`}>
+        <div className="h-1 shrink-0 bg-red-700" />
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-base font-semibold text-indigo-950 dark:text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200 hover:text-indigo-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
             aria-label="Close"
           >
             <SmallXIcon />
           </button>
         </div>
         {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
         {/* Footer */}
         {footer && (
-          <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900 sm:px-6">
             {footer}
           </div>
         )}
