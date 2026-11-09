@@ -97,7 +97,7 @@ async function sendViaSMTP(payload: EmailPayload): Promise<void> {
     tls: { rejectUnauthorized: false }, // allow self-signed certs for local mail servers
   });
 
-  const from = process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "TMS";
+  const from = process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "UEW TMS";
 
   await transport.sendMail({
     from,

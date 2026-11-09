@@ -120,7 +120,7 @@ export async function requestPasswordResetAction(
   try {
     await sendEmail({
       to: admin.email,
-      subject: `TMS — Password Reset Request`,
+      subject: `UEW-TMS  Password Reset Request`,
       html,
       text,
     });
