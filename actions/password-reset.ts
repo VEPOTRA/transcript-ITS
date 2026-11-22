@@ -9,7 +9,6 @@
 
 import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
-import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { admins, passwordResetTokens } from "@/db/schema";
 import { eq, and, gt, isNull } from "drizzle-orm";

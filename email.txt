@@ -1,7 +1,7 @@
 # ─── Add these to your .env.local ─────────────────────────────────────────────
 
 # Your app's public URL (used in the reset link sent by email)
-APP_URL=https://your-app.netlify.app
+APP_URL=https://transcript.vepotra.com
 # For local dev:
 # APP_URL=http://localhost:3000
 

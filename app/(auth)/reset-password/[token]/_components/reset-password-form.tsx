@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { resetPasswordAction } from "@/actions/password-reset";
+import { PasswordVisibilityToggle } from "@/components/ui/password-visibility-toggle";
 import type { ActionState } from "@/types/auth";
 
 const initialState: ActionState = { status: "idle" };
 
 export function ResetPasswordForm({ token }: { token: string }) {
+  const [showPassword, setShowPassword] = useState(false);
   const [state, formAction, isPending] = useActionState(
     resetPasswordAction,
     initialState,
@@ -70,20 +72,27 @@ export function ResetPasswordForm({ token }: { token: string }) {
         >
           New password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-          disabled={isPending}
-          aria-invalid={Boolean(fieldErrors?.password)}
-          aria-describedby={
-            fieldErrors?.password ? "password-error" : "password-hint"
-          }
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            minLength={8}
+            required
+            disabled={isPending}
+            aria-invalid={Boolean(fieldErrors?.password)}
+            aria-describedby={
+              fieldErrors?.password ? "password-error" : "password-hint"
+            }
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          />
+          <PasswordVisibilityToggle
+            visible={showPassword}
+            onToggle={() => setShowPassword((visible) => !visible)}
+            disabled={isPending}
+          />
+        </div>
         {fieldErrors?.password ? (
           <p id="password-error" className="text-xs text-red-600">
             {fieldErrors.password[0]}
@@ -102,19 +111,26 @@ export function ResetPasswordForm({ token }: { token: string }) {
         >
           Confirm new password
         </label>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          required
-          disabled={isPending}
-          aria-invalid={Boolean(fieldErrors?.confirmPassword)}
-          aria-describedby={
-            fieldErrors?.confirmPassword ? "confirm-password-error" : undefined
-          }
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-        />
+        <div className="relative">
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            disabled={isPending}
+            aria-invalid={Boolean(fieldErrors?.confirmPassword)}
+            aria-describedby={
+              fieldErrors?.confirmPassword ? "confirm-password-error" : undefined
+            }
+            className="block w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          />
+          <PasswordVisibilityToggle
+            visible={showPassword}
+            onToggle={() => setShowPassword((visible) => !visible)}
+            disabled={isPending}
+          />
+        </div>
         {fieldErrors?.confirmPassword && (
           <p id="confirm-password-error" className="text-xs text-red-600">
             {fieldErrors.confirmPassword[0]}

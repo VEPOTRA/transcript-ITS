@@ -26,7 +26,7 @@
  *   EMAIL_FROM=TMS <your@institution.edu.gh>
  *
  *   # Required for both options
- *   APP_URL=https://your-app.netlify.app
+ *   APP_URL=https://transcript.vepotra.com
  */
 
 export type EmailPayload = {

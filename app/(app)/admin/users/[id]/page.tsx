@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdminCampusAssign } from "@/components/admin/AdminCampusAssign";
+import { PasswordVisibilityToggle } from "@/components/ui/password-visibility-toggle";
 
 type Campus = { id: string; name: string; code: string };
 type Admin = {
@@ -35,6 +36,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   const [role, setRole] = useState<"SUPER_ADMIN" | "ADMIN" | "VIEWER">("ADMIN");
   const [newPassword, setNewPassword] = useState("");
   const [showPasswordField, setShowPasswordField] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmDisable, setConfirmDisable] = useState(false);
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
     setSuccess("Changes saved successfully.");
     setAdmin(data);
     setNewPassword("");
+    setShowPassword(false);
     setShowPasswordField(false);
     router.refresh();
   }
@@ -144,10 +147,16 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
             ) : (
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-slate-800 dark:text-slate-200">New password</label>
-                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-800/20" />
-                <button type="button" onClick={() => { setShowPasswordField(false); setNewPassword(""); }}
+                <div className="relative">
+                  <input type={showPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-12 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 focus:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-800/20" />
+                  <PasswordVisibilityToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((visible) => !visible)}
+                  />
+                </div>
+                <button type="button" onClick={() => { setShowPasswordField(false); setShowPassword(false); setNewPassword(""); }}
                   className="text-xs text-gray-500 hover:underline dark:text-gray-400">Cancel password reset</button>
               </div>
             )}
