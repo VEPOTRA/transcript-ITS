@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordVisibilityToggle } from "@/components/ui/password-visibility-toggle";
 
 const ROLES = ["SUPER_ADMIN", "ADMIN", "VIEWER"] as const;
 type Role = (typeof ROLES)[number];
@@ -33,6 +34,7 @@ export default function NewAdminPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<Role>("ADMIN");
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [campusesLoading, setCampusesLoading] = useState(true);
@@ -194,12 +196,18 @@ export default function NewAdminPage() {
           <label className="block text-sm font-medium text-slate-800 dark:text-slate-200">
             Password <span className="text-red-500">*</span>
           </label>
-          <input
-            type="password" required value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
-            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-800/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"} required value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-800/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+            <PasswordVisibilityToggle
+              visible={showPassword}
+              onToggle={() => setShowPassword((visible) => !visible)}
+            />
+          </div>
         </div>
 
         <div className="space-y-1">
